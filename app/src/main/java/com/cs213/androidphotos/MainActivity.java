@@ -26,7 +26,7 @@ public class MainActivity extends AppCompatActivity {
             return insets;
         });
 
-        AppDataManager.getInstance().initialize(this);
+        AppDataManager.getInstance(this).initialize(this);
         navigateToAlbumList();
     }
 
