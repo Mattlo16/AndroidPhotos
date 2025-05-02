@@ -1,8 +1,11 @@
 package com.cs213.androidphotos.ui;
 
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -17,7 +20,6 @@ import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.bumptech.glide.Glide;
 import com.cs213.androidphotos.R;
 import com.cs213.androidphotos.model.Album;
 import com.cs213.androidphotos.util.AppDataManager;
@@ -26,6 +28,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.textfield.TextInputEditText;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Objects;
 
@@ -89,11 +92,14 @@ public class AlbumActivity extends AppCompatActivity implements AdapterView.OnIt
                 
                 Photo photo = getItem(position);
                 if (photo != null) {
-                    Glide.with(AlbumActivity.this)
-                        .load(Uri.parse(photo.getUri()))
-                        .placeholder(R.drawable.ic_photo_placeholder)
-                        .error(R.drawable.ic_broken_image)
-                        .into(imageView);
+                    try {
+                        Bitmap bitmap = MediaStore.Images.Media.getBitmap(
+                            getContentResolver(), 
+                            Uri.parse(photo.getUri()));
+                        imageView.setImageBitmap(bitmap);
+                    } catch (IOException e) {
+                        imageView.setImageResource(R.drawable.ic_broken_image);
+                    }
                 }
                 
                 return imageView;

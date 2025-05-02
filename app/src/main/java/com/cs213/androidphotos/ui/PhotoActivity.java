@@ -1,8 +1,10 @@
 package com.cs213.androidphotos.ui;
 
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ArrayAdapter;
@@ -15,7 +17,6 @@ import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.bumptech.glide.Glide;
 import com.cs213.androidphotos.R;
 import com.cs213.androidphotos.model.Album;
 import com.cs213.androidphotos.util.AppDataManager;
@@ -23,6 +24,7 @@ import com.cs213.androidphotos.model.Photo;
 import com.cs213.androidphotos.model.Tag;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Locale;
@@ -74,9 +76,14 @@ public class PhotoActivity extends AppCompatActivity {
     }
     
     private void loadPhotoDetails() {
-        Glide.with(this)
-            .load(Uri.parse(currentPhoto.getUri()))
-            .into(photoImageView);
+        try {
+            Bitmap bitmap = MediaStore.Images.Media.getBitmap(
+                getContentResolver(), 
+                Uri.parse(currentPhoto.getUri()));
+            photoImageView.setImageBitmap(bitmap);
+        } catch (IOException e) {
+            photoImageView.setImageResource(R.drawable.ic_broken_image);
+        }
         
         captionTextView.setText(currentPhoto.getCaption().isEmpty() ? 
             "(No caption)" : currentPhoto.getCaption());

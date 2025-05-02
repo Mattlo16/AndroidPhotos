@@ -1,6 +1,9 @@
 package com.cs213.androidphotos.ui;
 
+import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -8,12 +11,12 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.bumptech.glide.Glide;
 import com.cs213.androidphotos.R;
 import com.cs213.androidphotos.model.Album;
 import com.cs213.androidphotos.util.AppDataManager;
 import com.cs213.androidphotos.model.Photo;
 
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.Locale;
@@ -73,9 +76,14 @@ public class SlideShowActivity extends AppCompatActivity {
 
         Photo photo = photos.get(position);
         
-        Glide.with(this)
-            .load(Uri.parse(photo.getUri()))
-            .into(photoImageView);
+        try {
+            Bitmap bitmap = MediaStore.Images.Media.getBitmap(
+                getContentResolver(), 
+                Uri.parse(photo.getUri()));
+            photoImageView.setImageBitmap(bitmap);
+        } catch (IOException e) {
+            photoImageView.setImageResource(R.drawable.ic_broken_image);
+        }
 
         captionTextView.setText(photo.getCaption().isEmpty() ? 
             "(No caption)" : photo.getCaption());
