@@ -68,7 +68,7 @@ public class AlbumActivity extends AppCompatActivity implements AdapterView.OnIt
     }
     
     private void loadAlbumPhotos() {
-        Album album = AppDataManager.getInstance().getAlbum(albumName);
+        Album album = AppDataManager.getInstance(this).getAlbum(albumName);
         if (album == null) {
             showErrorAndFinish("Album not found");
             return;
@@ -149,7 +149,7 @@ public class AlbumActivity extends AppCompatActivity implements AdapterView.OnIt
             return;
         }
         
-        boolean success = AppDataManager.getInstance().renameAlbum(albumName, newName);
+        boolean success = AppDataManager.getInstance(this).renameAlbum(albumName, newName);
         if (success) {
             albumName = newName;
             TextView albumNameTextView = findViewById(R.id.albumNameTextView);
@@ -170,7 +170,7 @@ public class AlbumActivity extends AppCompatActivity implements AdapterView.OnIt
     }
     
     private void deleteAlbum() {
-        boolean success = AppDataManager.getInstance().deleteAlbum(albumName);
+        boolean success = AppDataManager.getInstance(this).deleteAlbum(albumName);
         if (success) {
             showToast("Album deleted");
             finish();
@@ -197,7 +197,7 @@ public class AlbumActivity extends AppCompatActivity implements AdapterView.OnIt
                     uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 
                 Photo photo = new Photo(uri.toString());
-                boolean success = AppDataManager.getInstance().addPhotoToAlbum(albumName, photo);
+                boolean success = AppDataManager.getInstance(this).addPhotoToAlbum(albumName, photo);
                 
                 if (success) {
                     photosList.add(photo);
