@@ -1,0 +1,212 @@
+package com.cs213.androidphotos.ui;
+
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.widget.Toast;
+
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.cs213.androidphotos.R;
+import com.cs213.androidphotos.data.Album;
+import com.cs213.androidphotos.data.AppDataManager;
+import com.cs213.androidphotos.data.Photo;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.textfield.TextInputEditText;
+
+import java.util.ArrayList;
+import java.util.Objects;
+
+public class AlbumActivity extends AppCompatActivity implements PhotoAdapter.OnPhotoClickListener {
+
+    private static final int PICK_PHOTO_REQUEST = 1;
+    
+    private RecyclerView photosRecyclerView;
+    private PhotoAdapter photoAdapter;
+    private String albumName;
+    
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_album);
+        
+        albumName = getIntent().getStringExtra("albumName");
+        if (albumName == null || albumName.isEmpty()) {
+            showErrorAndFinish("Invalid album");
+            return;
+        }
+        
+        setTitle(albumName);
+        initializeViews();
+        loadAlbumPhotos();
+    }
+    
+    private void initializeViews() {
+        photosRecyclerView = findViewById(R.id.photosRecyclerView);
+        photosRecyclerView.setLayoutManager(new GridLayoutManager(this, 3));
+        
+        FloatingActionButton addPhotoFab = findViewById(R.id.addPhotoFab);
+        addPhotoFab.setOnClickListener(v -> openPhotoPicker());
+    }
+    
+    private void loadAlbumPhotos() {
+        Album album = AppDataManager.getInstance().getAlbum(albumName);
+        if (album == null) {
+            showErrorAndFinish("Album not found");
+            return;
+        }
+        
+        photoAdapter = new PhotoAdapter(new ArrayList<>(album.getPhotos()), this);
+        photosRecyclerView.setAdapter(photoAdapter);
+    }
+    
+    private void createAlbum(String newName) {
+        if (newName.isEmpty()) {
+            showToast("Album name cannot be empty");
+            return;
+        }
+        
+        if (AppDataManager.getInstance().albumExists(newName)) {
+            showToast("An album with this name already exists");
+            return;
+        }
+        
+        Album newAlbum = new Album(newName);
+        AppDataManager.getInstance().addAlbum(newAlbum);
+        showToast("Album created");
+    }
+
+    private void showRenameAlbumDialog() {
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+            .setTitle("Rename Album")
+            .setView(R.layout.dialog_rename_album)
+            .setPositiveButton("Rename", (d, which) -> {
+                TextInputEditText etNewName = ((AlertDialog)d).findViewById(R.id.etNewAlbumName);
+                String newName = Objects.requireNonNull(etNewName).getText().toString().trim();
+                renameAlbum(newName);
+            })
+            .setNegativeButton("Cancel", null)
+            .create();
+            
+        dialog.show();
+        
+        TextInputEditText etNewName = dialog.findViewById(R.id.etNewAlbumName);
+        if (etNewName != null) {
+            etNewName.setText(albumName);
+        }
+    }
+    
+    private void renameAlbum(String newName) {
+        if (newName.isEmpty()) {
+            showToast("Album name cannot be empty");
+            return;
+        }
+        
+        if (AppDataManager.getInstance().albumExists(newName) && !newName.equals(albumName)) {
+            showToast("An album with this name already exists");
+            return;
+        }
+        
+        boolean success = AppDataManager.getInstance().renameAlbum(albumName, newName);
+        if (success) {
+            albumName = newName;
+            setTitle(albumName);
+            showToast("Album renamed");
+        } else {
+            showToast("Failed to rename album");
+        }
+    }
+    private void confirmDeleteAlbum() {
+        new MaterialAlertDialogBuilder(this)
+            .setTitle("Delete Album")
+            .setMessage("Are you sure you want to delete this album?")
+            .setPositiveButton("Delete", (dialog, which) -> deleteAlbum())
+            .setNegativeButton("Cancel", null)
+            .show();
+    }
+    
+    private void deleteAlbum() {
+        boolean success = AppDataManager.getInstance().deleteAlbum(albumName);
+        if (success) {
+            showToast("Album deleted");
+            finish();
+        } else {
+            showToast("Failed to delete album");
+        }
+    }
+    
+    private void openPhotoPicker() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("image/*");
+        startActivityForResult(intent, PICK_PHOTO_REQUEST);
+    }
+    
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        
+        if (requestCode == PICK_PHOTO_REQUEST && resultCode == RESULT_OK && data != null) {
+            Uri uri = data.getData();
+            if (uri != null) {
+                getContentResolver().takePersistableUriPermission(
+                    uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                
+                Photo photo = new Photo(uri.toString());
+                boolean success = AppDataManager.getInstance().addPhotoToAlbum(albumName, photo);
+                
+                if (success) {
+                    photoAdapter.addPhoto(photo);
+                } else {
+                    showToast("Photo already exists in album");
+                }
+            }
+        }
+    }
+    
+    @Override
+    public void onPhotoClick(Photo photo) {
+        Intent intent = new Intent(this, PhotoActivity.class);
+        intent.putExtra("albumName", albumName);
+        intent.putExtra("photoUri", photo.getUri());
+        startActivity(intent);
+    }
+    
+    private void showToast(String message) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+    }
+    
+    private void showErrorAndFinish(String message) {
+        showToast(message);
+        finish();
+    }
+    
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.album_menu, menu);
+        return true;
+    }
+    
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int id = item.getItemId();
+        
+        if (id == R.id.action_delete_album) {
+            confirmDeleteAlbum();
+            return true;
+        } else if (id == R.id.action_rename_album) {
+            showRenameAlbumDialog();
+            return true;
+        } else if (id == R.id.action_search_photos) {
+            startActivity(new Intent(this, SearchActivity.class));
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+}
