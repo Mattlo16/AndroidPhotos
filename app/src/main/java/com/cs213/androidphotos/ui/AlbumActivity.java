@@ -149,8 +149,13 @@ public class AlbumActivity extends AppCompatActivity implements AdapterView.OnIt
             showToast("An album with this name already exists");
             return;
         }
-        
+
         Album albumToRename = AppDataManager.getInstance(this).getAlbum(albumName);
+        if (albumToRename == null) {
+            showToast("Album not found");
+            return;
+        }
+        
         boolean success = AppDataManager.getInstance(this).renameAlbum(albumToRename, newName);
         if (success) {
             albumName = newName;
@@ -172,7 +177,13 @@ public class AlbumActivity extends AppCompatActivity implements AdapterView.OnIt
     }
     
     private void deleteAlbum() {
-        boolean success = AppDataManager.getInstance(this).deleteAlbum(albumName);
+        Album albumToDelete = AppDataManager.getInstance(this).getAlbum(albumName);
+        if (albumToDelete == null) {
+            showToast("Album not found");
+            return;
+        }
+        
+        boolean success = AppDataManager.getInstance(this).deleteAlbum(albumToDelete);
         if (success) {
             showToast("Album deleted");
             finish();
@@ -195,8 +206,14 @@ public class AlbumActivity extends AppCompatActivity implements AdapterView.OnIt
         if (requestCode == PICK_PHOTO_REQUEST && resultCode == RESULT_OK && data != null) {
             String filePath = data.getData().getPath();
             if (filePath != null) {
+                Album album = AppDataManager.getInstance(this).getAlbum(albumName);
+                if (album == null) {
+                    showToast("Album not found");
+                    return;
+                }
+                
                 Photo photo = new Photo(filePath);
-                boolean success = AppDataManager.getInstance(this).addPhotoToAlbum(albumName, photo);
+                boolean success = AppDataManager.getInstance(this).addPhotoToAlbum(album, photo);
                 
                 if (success) {
                     photosList.add(photo);
