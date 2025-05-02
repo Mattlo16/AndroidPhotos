@@ -5,13 +5,19 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.GridView;
+import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.GridLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import com.cs213.androidphotos.R;
 import com.cs213.androidphotos.data.Album;
 import com.cs213.androidphotos.data.AppDataManager;
@@ -23,12 +29,13 @@ import com.google.android.material.textfield.TextInputEditText;
 import java.util.ArrayList;
 import java.util.Objects;
 
-public class AlbumActivity extends AppCompatActivity implements PhotoAdapter.OnPhotoClickListener {
+public class AlbumActivity extends AppCompatActivity implements AdapterView.OnItemClickListener {
 
     private static final int PICK_PHOTO_REQUEST = 1;
     
-    private RecyclerView photosRecyclerView;
-    private PhotoAdapter photoAdapter;
+    private GridView photosGridView;
+    private ArrayAdapter<Photo> photoAdapter;
+    private ArrayList<Photo> photosList;
     private String albumName;
     
     @Override
@@ -42,14 +49,16 @@ public class AlbumActivity extends AppCompatActivity implements PhotoAdapter.OnP
             return;
         }
         
-        setTitle(albumName);
+        TextView albumNameTextView = findViewById(R.id.albumNameTextView);
+        albumNameTextView.setText(albumName);
+        
         initializeViews();
         loadAlbumPhotos();
     }
     
     private void initializeViews() {
-        photosRecyclerView = findViewById(R.id.photosRecyclerView);
-        photosRecyclerView.setLayoutManager(new GridLayoutManager(this, 3));
+        photosGridView = findViewById(R.id.photosGridView);
+        photosGridView.setOnItemClickListener(this);
         
         FloatingActionButton addPhotoFab = findViewById(R.id.addPhotoFab);
         addPhotoFab.setOnClickListener(v -> openPhotoPicker());
@@ -62,26 +71,47 @@ public class AlbumActivity extends AppCompatActivity implements PhotoAdapter.OnP
             return;
         }
         
-        photoAdapter = new PhotoAdapter(new ArrayList<>(album.getPhotos()), this);
-        photosRecyclerView.setAdapter(photoAdapter);
-    }
-    
-    private void createAlbum(String newName) {
-        if (newName.isEmpty()) {
-            showToast("Album name cannot be empty");
-            return;
-        }
+        photosList = new ArrayList<>(album.getPhotos());
+        photoAdapter = new ArrayAdapter<Photo>(this, R.layout.item_photo, photosList) {
+            @Override
+            public View getView(int position, View convertView, ViewGroup parent) {
+                ImageView imageView;
+                if (convertView == null) {
+                    imageView = new ImageView(AlbumActivity.this);
+                    imageView.setLayoutParams(new GridView.LayoutParams(
+                        GridView.AUTO_FIT, 
+                        getResources().getDimensionPixelSize(R.dimen.grid_item_height)));
+                    imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                    imageView.setPadding(8, 8, 8, 8);
+                } else {
+                    imageView = (ImageView) convertView;
+                }
+                
+                Photo photo = getItem(position);
+                if (photo != null) {
+                    Glide.with(AlbumActivity.this)
+                        .load(Uri.parse(photo.getUri()))
+                        .placeholder(R.drawable.ic_photo_placeholder)
+                        .error(R.drawable.ic_broken_image)
+                        .into(imageView);
+                }
+                
+                return imageView;
+            }
+        };
         
-        if (AppDataManager.getInstance().albumExists(newName)) {
-            showToast("An album with this name already exists");
-            return;
-        }
-        
-        Album newAlbum = new Album(newName);
-        AppDataManager.getInstance().addAlbum(newAlbum);
-        showToast("Album created");
+        photosGridView.setAdapter(photoAdapter);
     }
 
+    @Override
+    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+        Photo photo = photosList.get(position);
+        Intent intent = new Intent(this, PhotoActivity.class);
+        intent.putExtra("albumName", albumName);
+        intent.putExtra("photoUri", photo.getUri());
+        startActivity(intent);
+    }
+    
     private void showRenameAlbumDialog() {
         AlertDialog dialog = new MaterialAlertDialogBuilder(this)
             .setTitle("Rename Album")
@@ -116,12 +146,14 @@ public class AlbumActivity extends AppCompatActivity implements PhotoAdapter.OnP
         boolean success = AppDataManager.getInstance().renameAlbum(albumName, newName);
         if (success) {
             albumName = newName;
-            setTitle(albumName);
+            TextView albumNameTextView = findViewById(R.id.albumNameTextView);
+            albumNameTextView.setText(albumName);
             showToast("Album renamed");
         } else {
             showToast("Failed to rename album");
         }
     }
+    
     private void confirmDeleteAlbum() {
         new MaterialAlertDialogBuilder(this)
             .setTitle("Delete Album")
@@ -162,20 +194,13 @@ public class AlbumActivity extends AppCompatActivity implements PhotoAdapter.OnP
                 boolean success = AppDataManager.getInstance().addPhotoToAlbum(albumName, photo);
                 
                 if (success) {
-                    photoAdapter.addPhoto(photo);
+                    photosList.add(photo);
+                    photoAdapter.notifyDataSetChanged();
                 } else {
                     showToast("Photo already exists in album");
                 }
             }
         }
-    }
-    
-    @Override
-    public void onPhotoClick(Photo photo) {
-        Intent intent = new Intent(this, PhotoActivity.class);
-        intent.putExtra("albumName", albumName);
-        intent.putExtra("photoUri", photo.getUri());
-        startActivity(intent);
     }
     
     private void showToast(String message) {
