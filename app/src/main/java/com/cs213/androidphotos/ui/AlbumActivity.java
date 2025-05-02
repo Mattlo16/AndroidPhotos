@@ -3,7 +3,6 @@ package com.cs213.androidphotos.ui;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.view.Menu;
@@ -93,11 +92,13 @@ public class AlbumActivity extends AppCompatActivity implements AdapterView.OnIt
                 Photo photo = getItem(position);
                 if (photo != null) {
                     try {
-                        Bitmap bitmap = MediaStore.Images.Media.getBitmap(
-                            getContentResolver(), 
-                            Uri.parse(photo.getUri()));
-                        imageView.setImageBitmap(bitmap);
-                    } catch (IOException e) {
+                        Bitmap bitmap = BitmapFactory.decodeFile(photo.getFilePath());
+                        if (bitmap != null) {
+                            imageView.setImageBitmap(bitmap);
+                        } else {
+                            imageView.setImageResource(R.drawable.ic_broken_image);
+                        }
+                    } catch (Exception e) {
                         imageView.setImageResource(R.drawable.ic_broken_image);
                     }
                 }
@@ -114,7 +115,7 @@ public class AlbumActivity extends AppCompatActivity implements AdapterView.OnIt
         Photo photo = photosList.get(position);
         Intent intent = new Intent(this, PhotoActivity.class);
         intent.putExtra("albumName", albumName);
-        intent.putExtra("photoUri", photo.getUri());
+        intent.putExtra("photoPath", photo.getFilePath());
         startActivity(intent);
     }
     
@@ -144,7 +145,7 @@ public class AlbumActivity extends AppCompatActivity implements AdapterView.OnIt
             return;
         }
         
-        if (AppDataManager.getInstance().albumExists(newName) && !newName.equals(albumName)) {
+        if (AppDataManager.getInstance(this).albumExists(newName) && !newName.equals(albumName)) {
             showToast("An album with this name already exists");
             return;
         }
@@ -191,12 +192,9 @@ public class AlbumActivity extends AppCompatActivity implements AdapterView.OnIt
         super.onActivityResult(requestCode, resultCode, data);
         
         if (requestCode == PICK_PHOTO_REQUEST && resultCode == RESULT_OK && data != null) {
-            Uri uri = data.getData();
-            if (uri != null) {
-                getContentResolver().takePersistableUriPermission(
-                    uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                
-                Photo photo = new Photo(uri.toString());
+            String filePath = data.getData().getPath();
+            if (filePath != null) {
+                Photo photo = new Photo(filePath);
                 boolean success = AppDataManager.getInstance(this).addPhotoToAlbum(albumName, photo);
                 
                 if (success) {
