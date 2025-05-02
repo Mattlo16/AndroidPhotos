@@ -150,7 +150,8 @@ public class AlbumActivity extends AppCompatActivity implements AdapterView.OnIt
             return;
         }
         
-        boolean success = AppDataManager.getInstance(this).renameAlbum(albumName, newName);
+        Album albumToRename = AppDataManager.getInstance(this).getAlbum(albumName);
+        boolean success = AppDataManager.getInstance(this).renameAlbum(albumToRename, newName);
         if (success) {
             albumName = newName;
             TextView albumNameTextView = findViewById(R.id.albumNameTextView);
