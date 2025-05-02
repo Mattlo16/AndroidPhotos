@@ -1,6 +1,9 @@
 package com.cs213.androidphotos.ui;
 
+import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
@@ -9,16 +12,15 @@ import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.DatePicker;
 import android.widget.EditText;
+import android.widget.GridView;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.ListView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.Spinner;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.GridLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
 import com.cs213.androidphotos.R;
 import com.cs213.androidphotos.model.Album;
@@ -26,7 +28,7 @@ import com.cs213.androidphotos.util.AppDataManager;
 import com.cs213.androidphotos.model.Photo;
 import com.cs213.androidphotos.model.Tag;
 
-import java.text.SimpleDateFormat;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashSet;
@@ -47,14 +49,14 @@ public class SearchActivity extends AppCompatActivity {
     private RadioButton singleTagRadio;
     private RadioButton andRadio;
     private RadioButton orRadio;
-    private RecyclerView searchResultsRecyclerView;
+    private GridView searchResultsGridView;
     private Button searchButton;
     private Button clearButton;
     private LinearLayout dateSearchContainer;
     private LinearLayout tagSearchContainer;
 
     private List<Photo> searchResults = new ArrayList<>();
-    private PhotoAdapter photoAdapter;
+    private ArrayAdapter<Photo> photoAdapter;
     private ArrayAdapter<String> tagNameAdapter;
     private ArrayAdapter<String> tagValueAdapter;
 
@@ -80,15 +82,44 @@ public class SearchActivity extends AppCompatActivity {
         singleTagRadio = findViewById(R.id.singleTagRadio);
         andRadio = findViewById(R.id.andRadio);
         orRadio = findViewById(R.id.orRadio);
-        searchResultsRecyclerView = findViewById(R.id.searchResultsRecyclerView);
+        searchResultsGridView = findViewById(R.id.searchResultsGridView);
         searchButton = findViewById(R.id.searchButton);
         clearButton = findViewById(R.id.clearButton);
         dateSearchContainer = findViewById(R.id.dateSearchContainer);
         tagSearchContainer = findViewById(R.id.tagSearchContainer);
 
-        searchResultsRecyclerView.setLayoutManager(new GridLayoutManager(this, 3));
-        photoAdapter = new PhotoAdapter(searchResults, null); 
-        searchResultsRecyclerView.setAdapter(photoAdapter);
+        photoAdapter = new ArrayAdapter<Photo>(this, R.layout.item_photo, searchResults) {
+            @Override
+            public View getView(int position, View convertView, ViewGroup parent) {
+                ImageView imageView;
+                if (convertView == null) {
+                    imageView = new ImageView(SearchActivity.this);
+                    imageView.setLayoutParams(new GridView.LayoutParams(
+                        GridView.AUTO_FIT, 
+                        getResources().getDimensionPixelSize(R.dimen.grid_item_height)));
+                    imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                    imageView.setPadding(8, 8, 8, 8);
+                } else {
+                    imageView = (ImageView) convertView;
+                }
+                
+                Photo photo = getItem(position);
+                if (photo != null) {
+                    try {
+                        Bitmap bitmap = MediaStore.Images.Media.getBitmap(
+                            getContentResolver(), 
+                            Uri.parse(photo.getUri()));
+                        imageView.setImageBitmap(bitmap);
+                    } catch (IOException e) {
+                        imageView.setImageResource(R.drawable.ic_broken_image);
+                    }
+                }
+                
+                return imageView;
+            }
+        };
+        
+        searchResultsGridView.setAdapter(photoAdapter);
     }
 
     private void setupAdapters() {
@@ -122,6 +153,13 @@ public class SearchActivity extends AppCompatActivity {
 
         tagName2Field.setEnabled(false);
         tagValue2Field.setEnabled(false);
+
+        searchResultsGridView.setOnItemClickListener((parent, view, position, id) -> {
+            Photo photo = searchResults.get(position);
+            Intent intent = new Intent(SearchActivity.this, PhotoActivity.class);
+            intent.putExtra("photoUri", photo.getUri());
+            startActivity(intent);
+        });
     }
 
     private void handleSearch() {
