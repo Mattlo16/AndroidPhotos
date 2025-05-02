@@ -17,10 +17,10 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.bumptech.glide.Glide;
 import com.cs213.androidphotos.R;
-import com.cs213.androidphotos.data.Album;
-import com.cs213.androidphotos.data.AppDataManager;
-import com.cs213.androidphotos.data.Photo;
-import com.cs213.androidphotos.data.Tag;
+import com.cs213.androidphotos.model.Album;
+import com.cs213.androidphotos.util.AppDataManager;
+import com.cs213.androidphotos.model.Photo;
+import com.cs213.androidphotos.model.Tag;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.text.SimpleDateFormat;

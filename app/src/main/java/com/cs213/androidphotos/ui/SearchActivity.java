@@ -21,10 +21,10 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.cs213.androidphotos.R;
-import com.cs213.androidphotos.data.Album;
-import com.cs213.androidphotos.data.AppDataManager;
-import com.cs213.androidphotos.data.Photo;
-import com.cs213.androidphotos.data.Tag;
+import com.cs213.androidphotos.model.Album;
+import com.cs213.androidphotos.util.AppDataManager;
+import com.cs213.androidphotos.model.Photo;
+import com.cs213.androidphotos.model.Tag;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
