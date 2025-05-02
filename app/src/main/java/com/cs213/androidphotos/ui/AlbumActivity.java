@@ -12,6 +12,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -25,7 +26,6 @@ import com.cs213.androidphotos.model.Album;
 import com.cs213.androidphotos.util.AppDataManager;
 import com.cs213.androidphotos.model.Photo;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.textfield.TextInputEditText;
 
 import java.io.IOException;
@@ -63,8 +63,8 @@ public class AlbumActivity extends AppCompatActivity implements AdapterView.OnIt
         photosGridView = findViewById(R.id.photosGridView);
         photosGridView.setOnItemClickListener(this);
         
-        FloatingActionButton addPhotoFab = findViewById(R.id.addPhotoFab);
-        addPhotoFab.setOnClickListener(v -> openPhotoPicker());
+        Button addPhotoButton = findViewById(R.id.addPhotoButton);
+        addPhotoButton.setOnClickListener(v -> openPhotoPicker());
     }
     
     private void loadAlbumPhotos() {
