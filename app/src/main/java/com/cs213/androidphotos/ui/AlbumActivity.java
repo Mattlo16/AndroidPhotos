@@ -145,7 +145,7 @@ public class AlbumActivity extends AppCompatActivity implements AdapterView.OnIt
             return;
         }
         
-        if (AppDataManager.getInstance(this).getAlbum(newName) && !newName.equals(albumName)) {
+        if (AppDataManager.getInstance(this).getAlbum(newName) != null && !newName.equals(albumName)) {
             showToast("An album with this name already exists");
             return;
         }
