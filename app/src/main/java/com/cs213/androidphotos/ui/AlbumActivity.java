@@ -103,20 +103,20 @@ public class AlbumActivity extends AppCompatActivity {
     }
 
     private void setupPhotoAdapter() {
-        photoAdapter = new ArrayAdapter<Photo>(this, android.R.layout.simple_list_item_1, album.getPhotos()) {
+        photoAdapter = new ArrayAdapter<Photo>(this, R.layout.item_photo, album.getPhotos()) {
             @Override
             public View getView(int position, View convertView, ViewGroup parent) {
-                ImageView imageView;
-
+                View itemView;
+                
                 if (convertView == null) {
-                    imageView = new ImageView(AlbumActivity.this);
-                    imageView.setLayoutParams(new GridView.LayoutParams(200, 200));
-                    imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                    imageView.setPadding(8, 8, 8, 8);
+                    itemView = getLayoutInflater().inflate(R.layout.item_photo, parent, false);
                 } else {
-                    imageView = (ImageView) convertView;
+                    itemView = convertView;
                 }
-
+                
+                ImageView imageView = itemView.findViewById(R.id.photoImageView);
+                ImageButton deleteButton = itemView.findViewById(R.id.deletePhotoButton);
+                
                 Photo photo = getItem(position);
                 if (photo != null) {
                     try {
@@ -128,16 +128,22 @@ public class AlbumActivity extends AppCompatActivity {
                             Bitmap bitmap = BitmapFactory.decodeFile(photo.getFilePath());
                             imageView.setImageBitmap(bitmap);
                         }
+                        
+                        // Set up delete button click listener
+                        deleteButton.setOnClickListener(v -> {
+                            confirmDeletePhoto(photo);
+                        });
+                        
                     } catch (Exception e) {
                         e.printStackTrace();
                         imageView.setImageResource(android.R.drawable.ic_menu_gallery);
                     }
                 }
-
-                return imageView;
+    
+                return itemView;
             }
         };
-
+    
         photosGridView.setAdapter(photoAdapter);
     }
 
