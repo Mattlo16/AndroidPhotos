@@ -1,8 +1,10 @@
 package com.cs213.androidphotos.ui;
 
+import android.content.ContentResolver;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -26,6 +28,8 @@ import com.cs213.androidphotos.model.Photo;
 import com.cs213.androidphotos.model.Tag;
 import com.cs213.androidphotos.util.AppDataManager;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -51,7 +55,6 @@ public class PhotoActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_photo);
 
-        // Get album and photo from intent
         String albumName = getIntent().getStringExtra("albumName");
         String photoPath = getIntent().getStringExtra("photoPath");
 
@@ -61,7 +64,6 @@ public class PhotoActivity extends AppCompatActivity {
             return;
         }
 
-        // Initialize AppDataManager and get data
         dataManager = AppDataManager.getInstance(this);
         album = dataManager.getAlbum(albumName);
 
@@ -71,7 +73,6 @@ public class PhotoActivity extends AppCompatActivity {
             return;
         }
 
-        // Find photo in album
         photo = null;
         for (Photo p : album.getPhotos()) {
             if (p.getFilePath().equals(photoPath)) {
@@ -86,16 +87,12 @@ public class PhotoActivity extends AppCompatActivity {
             return;
         }
 
-        // Initialize UI components
         initializeViews();
 
-        // Load photo and details
         loadPhotoDetails();
 
-        // Setup tag adapter
         setupTagAdapter();
 
-        // Setup button listeners
         setupButtonListeners();
     }
 
@@ -110,7 +107,6 @@ public class PhotoActivity extends AppCompatActivity {
         moveToAlbumButton = findViewById(R.id.moveToAlbumButton);
         backToAlbumButton = findViewById(R.id.backToAlbumButton);
 
-        // Set up tag type spinner
         ArrayAdapter<CharSequence> spinnerAdapter = ArrayAdapter.createFromResource(
                 this, R.array.tag_types, android.R.layout.simple_spinner_item);
         spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -118,16 +114,31 @@ public class PhotoActivity extends AppCompatActivity {
     }
 
     private void loadPhotoDetails() {
-        // Load image
         try {
-            Bitmap bitmap = BitmapFactory.decodeFile(photo.getFilePath());
-            photoImageView.setImageBitmap(bitmap);
+            String filePath = photo.getFilePath();
+            if (filePath.startsWith("content://")) {
+                Uri photoUri = Uri.parse(filePath);
+                photoImageView.setImageBitmap(getBitmapFromUri(photoUri));
+            } else {
+                Bitmap bitmap = BitmapFactory.decodeFile(photo.getFilePath());
+                photoImageView.setImageBitmap(bitmap);
+            }
         } catch (Exception e) {
+            e.printStackTrace();
             photoImageView.setImageResource(android.R.drawable.ic_menu_gallery);
         }
 
-        // Set caption (filename)
         captionTextView.setText(photo.getFileName());
+    }
+
+    private Bitmap getBitmapFromUri(Uri uri) throws IOException {
+        ContentResolver resolver = getContentResolver();
+        InputStream inputStream = resolver.openInputStream(uri);
+        Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+        if (inputStream != null) {
+            inputStream.close();
+        }
+        return bitmap;
     }
 
     private void setupTagAdapter() {
@@ -202,7 +213,6 @@ public class PhotoActivity extends AppCompatActivity {
                 .show();
     }
 
-    // Tag adapter for RecyclerView
     private class TagAdapter extends RecyclerView.Adapter<TagAdapter.TagViewHolder> {
         private List<Tag> tags;
 

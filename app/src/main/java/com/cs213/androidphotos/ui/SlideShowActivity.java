@@ -1,7 +1,9 @@
 package com.cs213.androidphotos.ui;
 
+import android.content.ContentResolver;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -19,6 +21,8 @@ import com.cs213.androidphotos.model.Album;
 import com.cs213.androidphotos.model.Photo;
 import com.cs213.androidphotos.util.AppDataManager;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 
 public class SlideShowActivity extends AppCompatActivity {
@@ -112,6 +116,17 @@ public class SlideShowActivity extends AppCompatActivity {
         });
     }
 
+    // Helper method to get bitmap from URI
+    private Bitmap getBitmapFromUri(Uri uri) throws IOException {
+        ContentResolver resolver = getContentResolver();
+        InputStream inputStream = resolver.openInputStream(uri);
+        Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+        if (inputStream != null) {
+            inputStream.close();
+        }
+        return bitmap;
+    }
+
     private class PhotoPagerAdapter extends androidx.recyclerview.widget.RecyclerView.Adapter<PhotoPagerAdapter.PhotoViewHolder> {
 
         @NonNull
@@ -128,9 +143,18 @@ public class SlideShowActivity extends AppCompatActivity {
 
             // Load image
             try {
-                Bitmap bitmap = BitmapFactory.decodeFile(photo.getFilePath());
-                holder.imageView.setImageBitmap(bitmap);
+                String filePath = photo.getFilePath();
+                if (filePath.startsWith("content://")) {
+                    // Handle content URI
+                    Uri photoUri = Uri.parse(filePath);
+                    holder.imageView.setImageBitmap(getBitmapFromUri(photoUri));
+                } else {
+                    // Handle file path directly
+                    Bitmap bitmap = BitmapFactory.decodeFile(photo.getFilePath());
+                    holder.imageView.setImageBitmap(bitmap);
+                }
             } catch (Exception e) {
+                e.printStackTrace();
                 holder.imageView.setImageResource(android.R.drawable.ic_menu_gallery);
             }
 

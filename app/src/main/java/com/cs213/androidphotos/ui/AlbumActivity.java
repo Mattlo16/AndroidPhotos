@@ -16,6 +16,9 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.EditText;
+import android.database.Cursor;
+import android.provider.DocumentsContract;
+import android.content.ContentResolver;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
@@ -27,6 +30,7 @@ import com.cs213.androidphotos.model.Photo;
 import com.cs213.androidphotos.util.AppDataManager;
 
 import java.io.IOException;
+import java.io.InputStream;
 
 public class AlbumActivity extends AppCompatActivity {
     private static final int PICK_PHOTO_REQUEST = 1;
@@ -43,7 +47,6 @@ public class AlbumActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_album);
 
-        // Get album name from intent
         String albumName = getIntent().getStringExtra("albumName");
         if (albumName == null) {
             Toast.makeText(this, "Error: Album name not provided", Toast.LENGTH_SHORT).show();
@@ -51,7 +54,6 @@ public class AlbumActivity extends AppCompatActivity {
             return;
         }
 
-        // Initialize AppDataManager
         dataManager = AppDataManager.getInstance(this);
         album = dataManager.getAlbum(albumName);
 
@@ -61,25 +63,20 @@ public class AlbumActivity extends AppCompatActivity {
             return;
         }
 
-        // Initialize UI components
         albumNameTextView = findViewById(R.id.albumNameTextView);
         photosGridView = findViewById(R.id.photosGridView);
         addPhotoButton = findViewById(R.id.addPhotoButton);
         albumMenuButton = findViewById(R.id.albumMenuButton);
         backButton = findViewById(R.id.backButton);
 
-        // Set album name
         albumNameTextView.setText(album.getName());
 
-        // Set up grid view adapter
         setupPhotoAdapter();
 
-        // Set up button listeners
         addPhotoButton.setOnClickListener(v -> openPhotoSelector());
         albumMenuButton.setOnClickListener(v -> showAlbumOptionsDialog());
         backButton.setOnClickListener(v -> finish());
 
-        // Set item click listener
         photosGridView.setOnItemClickListener((parent, view, position, id) -> {
             Photo photo = photoAdapter.getItem(position);
             if (photo != null) {
@@ -106,9 +103,16 @@ public class AlbumActivity extends AppCompatActivity {
                 Photo photo = getItem(position);
                 if (photo != null) {
                     try {
-                        Bitmap bitmap = BitmapFactory.decodeFile(photo.getFilePath());
-                        imageView.setImageBitmap(bitmap);
+                        String filePath = photo.getFilePath();
+                        if (filePath.startsWith("content://")) {
+                            Uri photoUri = Uri.parse(filePath);
+                            imageView.setImageBitmap(getBitmapFromUri(photoUri));
+                        } else {
+                            Bitmap bitmap = BitmapFactory.decodeFile(photo.getFilePath());
+                            imageView.setImageBitmap(bitmap);
+                        }
                     } catch (Exception e) {
+                        e.printStackTrace();
                         imageView.setImageResource(android.R.drawable.ic_menu_gallery);
                     }
                 }
@@ -134,8 +138,17 @@ public class AlbumActivity extends AppCompatActivity {
         if (requestCode == PICK_PHOTO_REQUEST && resultCode == RESULT_OK && data != null) {
             Uri photoUri = data.getData();
             if (photoUri != null) {
-                String filePath = photoUri.toString();
-                Photo newPhoto = dataManager.addPhotoToAlbum(album, filePath);
+                try {
+                    getContentResolver().takePersistableUriPermission(
+                            photoUri,
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    );
+                } catch (SecurityException e) {
+                    e.printStackTrace();
+                }
+
+                String uriString = photoUri.toString();
+                Photo newPhoto = dataManager.addPhotoToAlbum(album, uriString);
 
                 if (newPhoto != null) {
                     photoAdapter.notifyDataSetChanged();
@@ -145,6 +158,16 @@ public class AlbumActivity extends AppCompatActivity {
                 }
             }
         }
+    }
+
+    private Bitmap getBitmapFromUri(Uri uri) throws IOException {
+        ContentResolver resolver = getContentResolver();
+        InputStream inputStream = resolver.openInputStream(uri);
+        Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+        if (inputStream != null) {
+            inputStream.close();
+        }
+        return bitmap;
     }
 
     private void openPhotoView(Photo photo) {
