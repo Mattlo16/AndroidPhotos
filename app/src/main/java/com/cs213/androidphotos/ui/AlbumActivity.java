@@ -147,43 +147,45 @@ public class AlbumActivity extends AppCompatActivity {
     private void setupPhotoAdapter() {
         // Make sure we're working with a valid list
         if (album.getPhotos() == null) {
-            album.setPhotos(new ArrayList<>());
-        }
-        
-        photoAdapter = new ArrayAdapter<Photo>(this, android.R.layout.simple_list_item_1, album.getPhotos()) {
-            @Override
-            public View getView(int position, View convertView, ViewGroup parent) {
-                ImageView imageView;
+            // Instead of using setPhotos which doesn't exist, initialize with an empty adapter
+            // We'll handle this by initializing an adapter with an empty list
+            photoAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, new ArrayList<>());
+        } else {
+            photoAdapter = new ArrayAdapter<Photo>(this, android.R.layout.simple_list_item_1, album.getPhotos()) {
+                @Override
+                public View getView(int position, View convertView, ViewGroup parent) {
+                    ImageView imageView;
 
-                if (convertView == null) {
-                    imageView = new ImageView(AlbumActivity.this);
-                    imageView.setLayoutParams(new GridView.LayoutParams(200, 200));
-                    imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                    imageView.setPadding(8, 8, 8, 8);
-                } else {
-                    imageView = (ImageView) convertView;
-                }
-
-                Photo photo = getItem(position);
-                if (photo != null) {
-                    try {
-                        String filePath = photo.getFilePath();
-                        if (filePath.startsWith("content://")) {
-                            Uri photoUri = Uri.parse(filePath);
-                            imageView.setImageBitmap(getBitmapFromUri(photoUri));
-                        } else {
-                            Bitmap bitmap = BitmapFactory.decodeFile(photo.getFilePath());
-                            imageView.setImageBitmap(bitmap);
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        imageView.setImageResource(android.R.drawable.ic_menu_gallery);
+                    if (convertView == null) {
+                        imageView = new ImageView(AlbumActivity.this);
+                        imageView.setLayoutParams(new GridView.LayoutParams(200, 200));
+                        imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                        imageView.setPadding(8, 8, 8, 8);
+                    } else {
+                        imageView = (ImageView) convertView;
                     }
-                }
 
-                return imageView;
-            }
-        };
+                    Photo photo = getItem(position);
+                    if (photo != null) {
+                        try {
+                            String filePath = photo.getFilePath();
+                            if (filePath.startsWith("content://")) {
+                                Uri photoUri = Uri.parse(filePath);
+                                imageView.setImageBitmap(getBitmapFromUri(photoUri));
+                            } else {
+                                Bitmap bitmap = BitmapFactory.decodeFile(photo.getFilePath());
+                                imageView.setImageBitmap(bitmap);
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            imageView.setImageResource(android.R.drawable.ic_menu_gallery);
+                        }
+                    }
+
+                    return imageView;
+                }
+            };
+        }
 
         photosGridView.setAdapter(photoAdapter);
     }
