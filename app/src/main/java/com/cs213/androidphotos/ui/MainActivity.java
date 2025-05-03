@@ -28,23 +28,25 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-    
+
         // Initialize AppDataManager
         dataManager = AppDataManager.getInstance(this);
-    
+
         // Initialize UI components
-        albumsGrid = findViewById(R.id.albumsGrid);
-        newAlbumNameEditText = findViewById(R.id.newAlbumNameEditText);
-        createAlbumButton = findViewById(R.id.createAlbumButton);
-        searchButton = findViewById(R.id.searchButton);
-    
-        createAlbumButton.setOnClickListener(v -> createNewAlbum());
-        searchButton.setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivity.this, SearchActivity.class);
-            startActivity(intent);
-        });
-    
+        albumsGrid = new GridLayout(this);
+        albumsGrid.setColumnCount(2);
+
+        // Create a layout for adding albums
+        createNewAlbumLayout();
+
         // Display albums
+        displayAlbums();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Refresh the albums display when returning to this activity
         displayAlbums();
     }
 
