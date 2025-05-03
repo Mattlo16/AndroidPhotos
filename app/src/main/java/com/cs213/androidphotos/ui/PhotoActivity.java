@@ -202,22 +202,24 @@ public class PhotoActivity extends AppCompatActivity {
     }
     
     private void showMovePhotoDialog() {
-        ArrayList<String> otherAlbums = new ArrayList<>(
-                AppDataManager.getInstance(this).getAlbumNames()
-        );
-        otherAlbums.remove(albumName);
+        List<Album> allAlbums = AppDataManager.getInstance(this).getAlbums();
+        List<String> otherAlbumNames = new ArrayList<>();
         
-        if (otherAlbums.isEmpty()) {
+        for (Album album : allAlbums) {
+            if (!album.getName().equals(albumName)) {
+                otherAlbumNames.add(album.getName());
+            }
+        }
+        
+        if (otherAlbumNames.isEmpty()) {
             Toast.makeText(this, "No other albums available", Toast.LENGTH_SHORT).show();
             return;
         }
         
-        String[] albumNames = otherAlbums.toArray(new String[0]);
-        
         new MaterialAlertDialogBuilder(this)
                 .setTitle("Move Photo To...")
-                .setItems(albumNames, (dialog, which) -> {
-                    String targetAlbum = albumNames[which];
+                .setItems(otherAlbumNames.toArray(new String[0]), (dialog, which) -> {
+                    String targetAlbum = otherAlbumNames.get(which);
                     movePhotoToAlbum(targetAlbum);
                 })
                 .show();
