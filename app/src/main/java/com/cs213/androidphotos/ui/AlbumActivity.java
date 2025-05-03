@@ -142,7 +142,7 @@ public class AlbumActivity extends AppCompatActivity {
     }
 
     private void showPhotoOptionsDialog(Photo photo) {
-        String[] options = {"View Photo", "Delete Photo"};
+        String[] options = {"View Photo", "Start Slideshow", "Delete Photo"};
 
         new AlertDialog.Builder(this)
                 .setTitle("Photo Options")
@@ -151,12 +151,22 @@ public class AlbumActivity extends AppCompatActivity {
                         case 0: // View
                             openPhotoView(photo);
                             break;
-                        case 1: // Delete
+                        case 1: // Slideshow
+                            startSlideshow(photo);
+                            break;
+                        case 2: // Delete
                             confirmDeletePhoto(photo);
                             break;
                     }
                 })
                 .show();
+    }
+
+    private void startSlideshow(Photo startPhoto) {
+        Intent intent = new Intent(AlbumActivity.this, SlideShowActivity.class);
+        intent.putExtra("albumName", album.getName());
+        intent.putExtra("currentPhotoPath", startPhoto.getFilePath());
+        startActivity(intent);
     }
 
     private void confirmDeletePhoto(Photo photo) {
@@ -229,16 +239,23 @@ public class AlbumActivity extends AppCompatActivity {
     }
 
     private void showAlbumOptionsDialog() {
-        String[] options = {"Rename Album", "Delete Album"};
+        String[] options = {"Start Slideshow", "Rename Album", "Delete Album"};
 
         new AlertDialog.Builder(this)
                 .setTitle(R.string.album_actions)
                 .setItems(options, (dialog, which) -> {
                     switch (which) {
-                        case 0: // Rename
+                        case 0: // Slideshow
+                            if (album.getPhotos().isEmpty()) {
+                                Toast.makeText(this, "Album is empty. Add photos first.", Toast.LENGTH_SHORT).show();
+                            } else {
+                                startSlideshow(album.getPhotos().get(0));
+                            }
+                            break;
+                        case 1: // Rename
                             showRenameAlbumDialog();
                             break;
-                        case 1: // Delete
+                        case 2: // Delete
                             confirmDeleteAlbum();
                             break;
                     }
