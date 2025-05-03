@@ -5,7 +5,6 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Handler;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,10 +12,8 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.widget.ToggleButton;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.viewpager2.widget.ViewPager2;
 
@@ -39,15 +36,7 @@ public class SlideShowActivity extends AppCompatActivity {
     private Button previousButton;
     private Button exitButton;
     private Button nextButton;
-    private Button deleteButton;
-    private ToggleButton autoplayToggle;
     private TextView slideshowTitleTextView;
-    private TextView photoInfoTextView;
-
-    private Handler autoplayHandler = new Handler();
-    private Runnable autoplayRunnable;
-    private boolean isAutoplayActive = false;
-    private static final int AUTOPLAY_DELAY = 3000; // 3 seconds
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,6 +48,7 @@ public class SlideShowActivity extends AppCompatActivity {
         String currentPhotoPath = getIntent().getStringExtra("currentPhotoPath");
 
         if (albumName == null) {
+            Toast.makeText(this, "Error: No album specified", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
@@ -68,12 +58,14 @@ public class SlideShowActivity extends AppCompatActivity {
         album = dataManager.getAlbum(albumName);
 
         if (album == null) {
+            Toast.makeText(this, "Error: Album not found", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
 
         photos = album.getPhotos();
         if (photos.isEmpty()) {
+            Toast.makeText(this, "Error: Album is empty", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
@@ -84,30 +76,6 @@ public class SlideShowActivity extends AppCompatActivity {
         exitButton = findViewById(R.id.exitSlideshowButton);
         nextButton = findViewById(R.id.nextButton);
         slideshowTitleTextView = findViewById(R.id.slideshowTitleTextView);
-        
-        // These views might need to be added to your layout
-        photoInfoTextView = findViewById(R.id.photoInfoTextView);
-        autoplayToggle = findViewById(R.id.autoplayToggle);
-        deleteButton = findViewById(R.id.deletePhotoButton);
-        
-        // Handle null views if they don't exist in the layout yet
-        if (photoInfoTextView == null) {
-            photoInfoTextView = new TextView(this);
-            // Note: This is not a proper solution. You should add this to your XML layout.
-        }
-        
-        if (autoplayToggle == null) {
-            autoplayToggle = new ToggleButton(this);
-            autoplayToggle.setTextOn("Autoplay ON");
-            autoplayToggle.setTextOff("Autoplay OFF");
-            // Note: This is not a proper solution. You should add this to your XML layout.
-        }
-        
-        if (deleteButton == null) {
-            deleteButton = new Button(this);
-            deleteButton.setText("Delete");
-            // Note: This is not a proper solution. You should add this to your XML layout.
-        }
 
         // Set title
         slideshowTitleTextView.setText(getString(R.string.slideshow_title) + " - " + albumName);
@@ -121,12 +89,9 @@ public class SlideShowActivity extends AppCompatActivity {
             for (int i = 0; i < photos.size(); i++) {
                 if (photos.get(i).getFilePath().equals(currentPhotoPath)) {
                     slideshowViewPager.setCurrentItem(i, false);
-                    updatePhotoInfo(i);
                     break;
                 }
             }
-        } else {
-            updatePhotoInfo(0);
         }
 
         // Set up button listeners
@@ -145,25 +110,6 @@ public class SlideShowActivity extends AppCompatActivity {
         });
 
         exitButton.setOnClickListener(v -> finish());
-        
-        // Set up autoplay toggle
-        if (autoplayToggle != null) {
-            autoplayToggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                if (isChecked) {
-                    startAutoplay();
-                } else {
-                    stopAutoplay();
-                }
-            });
-        }
-        
-        // Set up delete button
-        if (deleteButton != null) {
-            deleteButton.setOnClickListener(v -> {
-                int position = slideshowViewPager.getCurrentItem();
-                confirmDeletePhoto(position);
-            });
-        }
 
         // Update button states based on position
         slideshowViewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
@@ -171,53 +117,87 @@ public class SlideShowActivity extends AppCompatActivity {
             public void onPageSelected(int position) {
                 previousButton.setEnabled(position > 0);
                 nextButton.setEnabled(position < photos.size() - 1);
-                updatePhotoInfo(position);
             }
         });
-        
-        // Initialize autoplay runnable
-        autoplayRunnable = new Runnable() {
-            @Override
-            public void run() {
-                if (isAutoplayActive) {
-                    int currentPosition = slideshowViewPager.getCurrentItem();
-                    if (currentPosition < photos.size() - 1) {
-                        slideshowViewPager.setCurrentItem(currentPosition + 1);
-                    } else {
-                        // Loop back to the beginning
-                        slideshowViewPager.setCurrentItem(0);
-                    }
-                    autoplayHandler.postDelayed(this, AUTOPLAY_DELAY);
-                }
-            }
-        };
-    }
-    
-    @Override
-    protected void onPause() {
-        super.onPause();
-        stopAutoplay();
     }
 
-    private void updatePhotoInfo(int position) {
-        if (photoInfoTextView != null && position >= 0 && position < photos.size()) {
+    private class PhotoPagerAdapter extends androidx.recyclerview.widget.RecyclerView.Adapter<PhotoPagerAdapter.PhotoViewHolder> {
+
+        @NonNull
+        @Override
+        public PhotoViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_photo_pager, parent, false);
+            return new PhotoViewHolder(view);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull PhotoViewHolder holder, int position) {
             Photo photo = photos.get(position);
-            StringBuilder infoBuilder = new StringBuilder();
-            infoBuilder.append("Photo: ").append(photo.getFileName());
             
+            try {
+                String filePath = photo.getFilePath();
+                if (filePath.startsWith("content://")) {
+                    Uri photoUri = Uri.parse(filePath);
+                    holder.photoImageView.setImageBitmap(getBitmapFromUri(photoUri));
+                } else {
+                    Bitmap bitmap = BitmapFactory.decodeFile(photo.getFilePath());
+                    holder.photoImageView.setImageBitmap(bitmap);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                holder.photoImageView.setImageResource(android.R.drawable.ic_menu_gallery);
+            }
+            
+            // Display file name
+            holder.fileNameTextView.setText(photo.getFileName());
+            
+            // Display tags if any
+            StringBuilder tagsInfo = new StringBuilder();
             List<Tag> tags = photo.getTags();
-            if (!tags.isEmpty()) {
-                infoBuilder.append("\nTags: ");
+            
+            if (tags != null && !tags.isEmpty()) {
+                tagsInfo.append("Tags: ");
                 for (int i = 0; i < tags.size(); i++) {
                     Tag tag = tags.get(i);
-                    infoBuilder.append(tag.getType()).append(": ").append(tag.getValue());
+                    tagsInfo.append(tag.getType()).append(": ").append(tag.getValue());
                     if (i < tags.size() - 1) {
-                        infoBuilder.append(", ");
+                        tagsInfo.append(", ");
                     }
                 }
             }
             
-            photoInfoTextView.setText(infoBuilder.toString());
+            holder.tagsTextView.setText(tagsInfo.toString());
+            // Show/hide tags view based on whether there are tags
+            holder.tagsTextView.setVisibility(tagsInfo.length() > 0 ? View.VISIBLE : View.GONE);
         }
+
+        @Override
+        public int getItemCount() {
+            return photos.size();
+        }
+
+        class PhotoViewHolder extends androidx.recyclerview.widget.RecyclerView.ViewHolder {
+            ImageView photoImageView;
+            TextView fileNameTextView;
+            TextView tagsTextView;
+
+            PhotoViewHolder(View itemView) {
+                super(itemView);
+                photoImageView = itemView.findViewById(R.id.pagerPhotoImageView);
+                fileNameTextView = itemView.findViewById(R.id.pagerFileNameTextView);
+                tagsTextView = itemView.findViewById(R.id.pagerTagsTextView);
+            }
+        }
+    }
+
+    private Bitmap getBitmapFromUri(Uri uri) throws IOException {
+        ContentResolver resolver = getContentResolver();
+        InputStream inputStream = resolver.openInputStream(uri);
+        Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+        if (inputStream != null) {
+            inputStream.close();
+        }
+        return bitmap;
     }
 }
