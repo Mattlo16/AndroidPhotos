@@ -22,6 +22,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.cs213.androidphotos.R;
+import com.cs213.androidphotos.model.Album;
 import com.cs213.androidphotos.model.Photo;
 import com.cs213.androidphotos.model.Tag;
 import com.cs213.androidphotos.util.AppDataManager;
@@ -108,13 +109,13 @@ public class PhotoActivity extends AppCompatActivity {
         tagsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         tagsAdapter = new TagsAdapter(new ArrayList<>());
         tagsRecyclerView.setAdapter(tagsAdapter);
-
+        
         ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_spinner_item,
                 new String[]{"Person", "Location"});
         spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         tagTypeSpinner.setAdapter(spinnerAdapter);
-
+        
         albumName = getIntent().getStringExtra("albumName");
         String photoPath = getIntent().getStringExtra("photoPath");
         
@@ -123,9 +124,15 @@ public class PhotoActivity extends AppCompatActivity {
             return;
         }
         
-        currentPhoto = AppDataManager.getInstance(this).getPhotoByPath(photoPath);
+        Album album = AppDataManager.getInstance(this).getAlbum(albumName);
+        if (album == null) {
+            showErrorAndFinish("Album not found");
+            return;
+        }
+        
+        currentPhoto = findPhotoByPath(album, photoPath);
         if (currentPhoto == null) {
-            showErrorAndFinish("Photo not found");
+            showErrorAndFinish("Photo not found in album");
             return;
         }
         
@@ -137,6 +144,15 @@ public class PhotoActivity extends AppCompatActivity {
         backToAlbumButton.setOnClickListener(v -> finish());
         
         loadPhotoDetails();
+    }
+
+    private Photo findPhotoByPath(Album album, String photoPath) {
+        for (Photo photo : album.getPhotos()) {
+            if (photo.getFilePath().equals(photoPath)) {
+                return photo;
+            }
+        }
+        return null;
     }
     
     private void loadPhotoDetails() {
