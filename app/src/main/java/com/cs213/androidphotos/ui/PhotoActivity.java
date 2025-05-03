@@ -3,9 +3,7 @@ package com.cs213.androidphotos.ui;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.net.Uri;
 import android.os.Bundle;
-import android.provider.MediaStore;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -21,13 +19,11 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.cs213.androidphotos.R;
-import com.cs213.androidphotos.model.Album;
 import com.cs213.androidphotos.model.Photo;
 import com.cs213.androidphotos.model.Tag;
 import com.cs213.androidphotos.util.AppDataManager;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Locale;
@@ -35,7 +31,6 @@ import java.util.Locale;
 public class PhotoActivity extends AppCompatActivity {
     private ImageView photoImageView;
     private TextView captionTextView;
-    private TextView dateTextView;
     private RecyclerView tagsRecyclerView;
     private Spinner tagTypeSpinner;
     private EditText tagValueEditText;
@@ -62,8 +57,6 @@ public class PhotoActivity extends AppCompatActivity {
         slideshowButton = findViewById(R.id.slideshowButton);
         moveToAlbumButton = findViewById(R.id.moveToAlbumButton);
         backToAlbumButton = findViewById(R.id.backToAlbumButton);
-
-        dateTextView = findViewById(R.id.dateTextView); 
         
         tagsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         tagsAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1);
@@ -113,11 +106,6 @@ public class PhotoActivity extends AppCompatActivity {
         
         captionTextView.setText(currentPhoto.getCaption().isEmpty() ? 
             "(No caption)" : currentPhoto.getCaption());
-        
-        if (dateTextView != null) {
-            SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss", Locale.getDefault());
-            dateTextView.setText(dateFormat.format(currentPhoto.getDate()));
-        }
         
         updateTagsList();
     }
