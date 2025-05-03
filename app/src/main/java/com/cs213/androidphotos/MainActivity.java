@@ -38,8 +38,7 @@ public class MainActivity extends AppCompatActivity {
         createAlbumButton = findViewById(R.id.createAlbumButton);
         searchButton = findViewById(R.id.searchButton);
 
-        // Set column count (can keep this programmatic)
-        albumsGrid.setColumnCount(2);
+        albumsGrid.setColumnCount(1);
 
         // Set click listeners
         createAlbumButton.setOnClickListener(v -> createNewAlbum());
