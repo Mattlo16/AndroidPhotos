@@ -124,10 +124,10 @@ public class AlbumActivity extends AppCompatActivity implements AdapterView.OnIt
                         if (bitmap != null) {
                             imageView.setImageBitmap(bitmap);
                         } else {
-                            imageView.setImageResource(R.drawable.ic_broken_image);
+                            imageView.setImageResource(null);
                         }
                     } catch (Exception e) {
-                        imageView.setImageResource(R.drawable.ic_broken_image);
+                        imageView.setImageResource(null);
                     }
                 }
                 
