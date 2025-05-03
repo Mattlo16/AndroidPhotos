@@ -5,8 +5,6 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.provider.MediaStore;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -64,6 +62,37 @@ public class AlbumActivity extends AppCompatActivity implements AdapterView.OnIt
         
         Button addPhotoButton = findViewById(R.id.addPhotoButton);
         addPhotoButton.setOnClickListener(v -> openPhotoPicker());
+
+        Button backButton = findViewById(R.id.backButton);
+        backButton.setOnClickListener(v -> finish());
+
+        Button menuButton = findViewById(R.id.albumMenuButton);
+        menuButton.setOnClickListener(v -> showAlbumActionsMenu());
+
+    }
+
+    private void showAlbumActionsMenu() {
+        new MaterialAlertDialogBuilder(this)
+            .setTitle("Album Actions")
+            .setItems(new String[]{
+                    "Rename Album", 
+                    "Delete Album", 
+                    "Search Photos"
+            }, (dialog, which) -> {
+                switch (which) {
+                    case 0:
+                        showRenameAlbumDialog();
+                        break;
+                    case 1:
+                        confirmDeleteAlbum();
+                        break;
+                    case 2:
+                        startActivity(new Intent(this, SearchActivity.class));
+                        break;
+                }
+            })
+            .setNegativeButton("Cancel", null)
+            .show();
     }
     
     private void loadAlbumPhotos() {
@@ -233,27 +262,6 @@ public class AlbumActivity extends AppCompatActivity implements AdapterView.OnIt
         showToast(message);
         finish();
     }
-    
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.album_menu, menu);
-        return true;
-    }
-    
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        int id = item.getItemId();
-        
-        if (id == R.id.action_delete_album) {
-            confirmDeleteAlbum();
-            return true;
-        } else if (id == R.id.action_rename_album) {
-            showRenameAlbumDialog();
-            return true;
-        } else if (id == R.id.action_search_photos) {
-            startActivity(new Intent(this, SearchActivity.class));
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
-    }
 }
+    
+    

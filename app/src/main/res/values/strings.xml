@@ -12,6 +12,9 @@
     <string name="back_to_albums">Back to Albums</string>
     <string name="delete_album">Delete</string>
     <string name="rename_album">Rename</string>
+
+    <string name="album_actions">Album Actions</string>
+    <string name="menu_icon">⋮</string>
     
     <string name="photo_description">Photo</string>
     <string name="photo_caption_placeholder">Photo Caption</string>

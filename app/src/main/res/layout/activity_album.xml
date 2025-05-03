@@ -62,6 +62,16 @@
             android:backgroundTint="@color/colorAccent"
             android:textColor="@color/colorButtonText" />
 
+         <Button
+            android:id="@+id/albumMenuButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/album_actions" 
+            android:layout_marginStart="8dp"
+            android:backgroundTint="@color/colorPrimary"
+            android:textColor="@color/colorOnPrimary" />
+
         <Button
             android:id="@+id/backButton"
             android:layout_width="0dp"

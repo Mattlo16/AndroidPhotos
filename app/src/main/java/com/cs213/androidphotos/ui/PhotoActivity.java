@@ -5,23 +5,25 @@ import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
-import android.view.Menu;
-import android.view.MenuItem;
+import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.ListView;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.cs213.androidphotos.R;
 import com.cs213.androidphotos.model.Album;
-import com.cs213.androidphotos.util.AppDataManager;
 import com.cs213.androidphotos.model.Photo;
 import com.cs213.androidphotos.model.Tag;
+import com.cs213.androidphotos.util.AppDataManager;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.io.IOException;
@@ -33,9 +35,13 @@ public class PhotoActivity extends AppCompatActivity {
     private ImageView photoImageView;
     private TextView captionTextView;
     private TextView dateTextView;
-    private ListView tagsListView;
-    private EditText tagNameEditText;
+    private RecyclerView tagsRecyclerView;
+    private Spinner tagTypeSpinner;
     private EditText tagValueEditText;
+    private Button addTagButton;
+    private Button slideshowButton;
+    private Button moveToAlbumButton;
+    private Button backToAlbumButton;
     
     private String albumName;
     private Photo currentPhoto;
@@ -46,13 +52,30 @@ public class PhotoActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_photo);
         
+        // Initialize views
         photoImageView = findViewById(R.id.photoImageView);
         captionTextView = findViewById(R.id.captionTextView);
         dateTextView = findViewById(R.id.dateTextView);
-        tagsListView = findViewById(R.id.tagsListView);
-        tagNameEditText = findViewById(R.id.tagNameEditText);
+        tagsRecyclerView = findViewById(R.id.tagsRecyclerView);
+        tagTypeSpinner = findViewById(R.id.tagTypeSpinner);
         tagValueEditText = findViewById(R.id.tagValueEditText);
+        addTagButton = findViewById(R.id.addTagButton);
+        slideshowButton = findViewById(R.id.slideshowButton);
+        moveToAlbumButton = findViewById(R.id.moveToAlbumButton);
+        backToAlbumButton = findViewById(R.id.backToAlbumButton);
         
+        // Setup RecyclerView
+        tagsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        tagsAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1);
+        tagsRecyclerView.setAdapter(tagsAdapter);
+        
+        // Setup Spinner
+        ArrayAdapter<CharSequence> spinnerAdapter = ArrayAdapter.createFromResource(this,
+                R.array.tag_types, android.R.layout.simple_spinner_item);
+        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        tagTypeSpinner.setAdapter(spinnerAdapter);
+        
+        // Get intent data
         albumName = getIntent().getStringExtra("albumName");
         String photoUri = getIntent().getStringExtra("photoUri");
         
@@ -69,8 +92,11 @@ public class PhotoActivity extends AppCompatActivity {
         
         setTitle(currentPhoto.getCaption().isEmpty() ? "Photo" : currentPhoto.getCaption());
         
-        tagsAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1);
-        tagsListView.setAdapter(tagsAdapter);
+        // Set click listeners
+        addTagButton.setOnClickListener(v -> onAddTagClick());
+        slideshowButton.setOnClickListener(v -> startSlideshow());
+        moveToAlbumButton.setOnClickListener(v -> showMovePhotoDialog());
+        backToAlbumButton.setOnClickListener(v -> finish());
         
         loadPhotoDetails();
     }
@@ -99,32 +125,33 @@ public class PhotoActivity extends AppCompatActivity {
         for (Tag tag : currentPhoto.getTags()) {
             tagsAdapter.add(tag.toString());
         }
+        tagsAdapter.notifyDataSetChanged();
     }
     
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.photo_menu, menu);
-        return true;
-    }
-    
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        int id = item.getItemId();
+    private void onAddTagClick() {
+        String tagName = tagTypeSpinner.getSelectedItem().toString();
+        String tagValue = tagValueEditText.getText().toString().trim();
         
-        if (id == R.id.action_edit_caption) {
-            showEditCaptionDialog();
-            return true;
-        } else if (id == R.id.action_delete_photo) {
-            confirmDeletePhoto();
-            return true;
-        } else if (id == R.id.action_move_photo) {
-            showMovePhotoDialog();
-            return true;
-        } else if (id == R.id.action_copy_photo) {
-            showCopyPhotoDialog();
-            return true;
+        if (tagValue.isEmpty()) {
+            Toast.makeText(this, "Tag value cannot be empty", Toast.LENGTH_SHORT).show();
+            return;
         }
-        return super.onOptionsItemSelected(item);
+        
+        Tag newTag = new Tag(tagName, tagValue);
+        if (currentPhoto.addTag(newTag)) {
+            AppDataManager.getInstance().updatePhoto(albumName, currentPhoto);
+            tagValueEditText.setText("");
+            updateTagsList();
+        } else {
+            Toast.makeText(this, "Tag already exists on this photo", Toast.LENGTH_SHORT).show();
+        }
+    }
+    
+    private void startSlideshow() {
+        Intent intent = new Intent(this, SlideShowActivity.class);
+        intent.putExtra("albumName", albumName);
+        intent.putExtra("photoUri", currentPhoto.getUri());
+        startActivity(intent);
     }
     
     private void showEditCaptionDialog() {
@@ -172,51 +199,6 @@ public class PhotoActivity extends AppCompatActivity {
             finish();
         } else {
             Toast.makeText(this, "Failed to delete photo", Toast.LENGTH_SHORT).show();
-        }
-    }
-    
-    public void onAddTagClick(android.view.View view) {
-        String tagName = tagNameEditText.getText().toString().trim();
-        String tagValue = tagValueEditText.getText().toString().trim();
-        
-        if (tagName.isEmpty() || tagValue.isEmpty()) {
-            Toast.makeText(this, "Tag name and value cannot be empty", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        
-        if (!tagName.equalsIgnoreCase("person") && !tagName.equalsIgnoreCase("location")) {
-            Toast.makeText(this, "Only 'person' and 'location' tags are allowed", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        
-        Tag newTag = new Tag(tagName.toLowerCase(), tagValue);
-        if (currentPhoto.addTag(newTag)) {
-            AppDataManager.getInstance().updatePhoto(albumName, currentPhoto);
-            tagNameEditText.setText("");
-            tagValueEditText.setText("");
-            updateTagsList();
-        } else {
-            Toast.makeText(this, "Tag already exists on this photo", Toast.LENGTH_SHORT).show();
-        }
-    }
-    
-    public void onDeleteTagClick(android.view.View view) {
-        int position = tagsListView.getCheckedItemPosition();
-        if (position == ListView.INVALID_POSITION) {
-            Toast.makeText(this, "No tag selected", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        
-        String selectedTag = tagsAdapter.getItem(position);
-        if (selectedTag != null) {
-            String[] parts = selectedTag.split("=", 2);
-            if (parts.length == 2) {
-                Tag tagToRemove = new Tag(parts[0], parts[1]);
-                if (currentPhoto.removeTag(tagToRemove)) {
-                    AppDataManager.getInstance().updatePhoto(albumName, currentPhoto);
-                    updateTagsList();
-                }
-            }
         }
     }
     
