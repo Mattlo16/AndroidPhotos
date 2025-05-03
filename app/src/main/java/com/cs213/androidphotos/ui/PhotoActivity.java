@@ -86,7 +86,7 @@ public class PhotoActivity extends AppCompatActivity {
             }
 
             public void bind(Tag tag) {
-                textView.setText(tag.toString());
+                textView.setText(tag.getType() + ": " + tag.getValue());
             }
         }
     }
@@ -109,13 +109,13 @@ public class PhotoActivity extends AppCompatActivity {
         tagsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         tagsAdapter = new TagsAdapter(new ArrayList<>());
         tagsRecyclerView.setAdapter(tagsAdapter);
-        
+
         ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_spinner_item,
                 new String[]{"Person", "Location"});
         spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         tagTypeSpinner.setAdapter(spinnerAdapter);
-        
+
         albumName = getIntent().getStringExtra("albumName");
         String photoPath = getIntent().getStringExtra("photoPath");
         
@@ -123,7 +123,7 @@ public class PhotoActivity extends AppCompatActivity {
             showErrorAndFinish("Invalid photo data");
             return;
         }
-        
+
         Album album = AppDataManager.getInstance(this).getAlbum(albumName);
         if (album == null) {
             showErrorAndFinish("Album not found");
@@ -136,8 +136,8 @@ public class PhotoActivity extends AppCompatActivity {
             return;
         }
         
-        setTitle(currentPhoto.getCaption().isEmpty() ? "Photo" : currentPhoto.getCaption());
-        
+        setTitle("Photo");
+
         addTagButton.setOnClickListener(v -> onAddTagClick());
         slideshowButton.setOnClickListener(v -> startSlideshow());
         moveToAlbumButton.setOnClickListener(v -> showMovePhotoDialog());
@@ -167,14 +167,15 @@ public class PhotoActivity extends AppCompatActivity {
             photoImageView.setImageResource(android.R.drawable.ic_menu_gallery);
         }
         
-        captionTextView.setText(currentPhoto.getCaption().isEmpty() ? 
-                "(No caption)" : currentPhoto.getCaption());
+        captionTextView.setText(currentPhoto.getFilePath());
         
         updateTagsList();
     }
     
     private void updateTagsList() {
-        tagsAdapter.updateTags(currentPhoto.getTags());
+        if (currentPhoto.getTags() != null) {
+            tagsAdapter.updateTags(currentPhoto.getTags());
+        }
     }
     
     private void onAddTagClick() {
