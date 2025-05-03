@@ -29,6 +29,10 @@
         <activity
             android:name=".ui.AlbumActivity"
             android:exported="false" />
+        
+        <activity
+            android:name=".ui.SlideShowActivity"
+            android:exported="false" />
 
     </application>
 
