@@ -109,9 +109,8 @@ public class AlbumActivity extends AppCompatActivity implements AdapterView.OnIt
                 ImageView imageView;
                 if (convertView == null) {
                     imageView = new ImageView(AlbumActivity.this);
-                    imageView.setLayoutParams(new GridView.LayoutParams(
-                        GridView.AUTO_FIT, 
-                        getResources().getDimensionPixelSize(R.dimen.grid_item_height)));
+                    int imageSize = getResources().getDisplayMetrics().widthPixels / 3 - 16;
+                    imageView.setLayoutParams(new GridView.LayoutParams(imageSize, imageSize));
                     imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
                     imageView.setPadding(8, 8, 8, 8);
                 } else {
