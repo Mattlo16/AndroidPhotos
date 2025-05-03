@@ -4,7 +4,9 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
@@ -13,6 +15,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -24,11 +27,11 @@ import com.cs213.androidphotos.model.Tag;
 import com.cs213.androidphotos.util.AppDataManager;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Locale;
+import java.util.List;
 
 public class PhotoActivity extends AppCompatActivity {
+
     private ImageView photoImageView;
     private TextView captionTextView;
     private RecyclerView tagsRecyclerView;
@@ -41,8 +44,52 @@ public class PhotoActivity extends AppCompatActivity {
     
     private String albumName;
     private Photo currentPhoto;
-    private ArrayAdapter<String> tagsAdapter;
-    
+    private TagsAdapter tagsAdapter;
+
+    private class TagsAdapter extends RecyclerView.Adapter<TagsAdapter.TagViewHolder> {
+        private List<Tag> tags;
+
+        public TagsAdapter(List<Tag> tags) {
+            this.tags = tags;
+        }
+
+        public void updateTags(List<Tag> newTags) {
+            this.tags = newTags;
+            notifyDataSetChanged();
+        }
+
+        @NonNull
+        @Override
+        public TagViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(parent.getContext())
+                    .inflate(android.R.layout.simple_list_item_1, parent, false);
+            return new TagViewHolder(view);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull TagViewHolder holder, int position) {
+            holder.bind(tags.get(position));
+        }
+
+        @Override
+        public int getItemCount() {
+            return tags.size();
+        }
+
+        class TagViewHolder extends RecyclerView.ViewHolder {
+            private final TextView textView;
+
+            public TagViewHolder(@NonNull View itemView) {
+                super(itemView);
+                textView = itemView.findViewById(android.R.id.text1);
+            }
+
+            public void bind(Tag tag) {
+                textView.setText(tag.toString());
+            }
+        }
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -59,15 +106,15 @@ public class PhotoActivity extends AppCompatActivity {
         backToAlbumButton = findViewById(R.id.backToAlbumButton);
         
         tagsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
-        tagsAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1);
+        tagsAdapter = new TagsAdapter(new ArrayList<>());
         tagsRecyclerView.setAdapter(tagsAdapter);
-        
-        ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(this, 
-            android.R.layout.simple_spinner_item, 
-            new String[]{"Person", "Location"});
+
+        ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_item,
+                new String[]{"Person", "Location"});
         spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         tagTypeSpinner.setAdapter(spinnerAdapter);
-        
+
         albumName = getIntent().getStringExtra("albumName");
         String photoPath = getIntent().getStringExtra("photoPath");
         
@@ -105,17 +152,13 @@ public class PhotoActivity extends AppCompatActivity {
         }
         
         captionTextView.setText(currentPhoto.getCaption().isEmpty() ? 
-            "(No caption)" : currentPhoto.getCaption());
+                "(No caption)" : currentPhoto.getCaption());
         
         updateTagsList();
     }
     
     private void updateTagsList() {
-        tagsAdapter.clear();
-        for (Tag tag : currentPhoto.getTags()) {
-            tagsAdapter.add(tag.toString());
-        }
-        tagsAdapter.notifyDataSetChanged();
+        tagsAdapter.updateTags(currentPhoto.getTags());
     }
     
     private void onAddTagClick() {
@@ -144,55 +187,9 @@ public class PhotoActivity extends AppCompatActivity {
         startActivity(intent);
     }
     
-    private void showEditCaptionDialog() {
-        LinearLayout layout = new LinearLayout(this);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(50, 40, 50, 10);
-
-        final EditText input = new EditText(this);
-        input.setText(currentPhoto.getCaption());
-        layout.addView(input);
-
-        new MaterialAlertDialogBuilder(this)
-            .setTitle("Edit Caption")
-            .setView(layout)
-            .setPositiveButton("Save", (dialog, which) -> {
-                String newCaption = input.getText().toString().trim();
-                editCaption(newCaption);
-            })
-            .setNegativeButton("Cancel", null)
-            .show();
-    }
-    
-    private void editCaption(String newCaption) {
-        currentPhoto.setCaption(newCaption);
-        AppDataManager.getInstance(this).updatePhoto(albumName, currentPhoto);
-        setTitle(newCaption.isEmpty() ? "Photo" : newCaption);
-        captionTextView.setText(newCaption.isEmpty() ? "(No caption)" : newCaption);
-    }
-    
-    private void confirmDeletePhoto() {
-        new MaterialAlertDialogBuilder(this)
-            .setTitle("Delete Photo")
-            .setMessage("Are you sure you want to delete this photo?")
-            .setPositiveButton("Delete", (dialog, which) -> deletePhoto())
-            .setNegativeButton("Cancel", null)
-            .show();
-    }
-    
-    private void deletePhoto() {
-        boolean success = AppDataManager.getInstance(this).removePhotoFromAlbum(albumName, currentPhoto);
-        if (success) {
-            Toast.makeText(this, "Photo deleted", Toast.LENGTH_SHORT).show();
-            finish();
-        } else {
-            Toast.makeText(this, "Failed to delete photo", Toast.LENGTH_SHORT).show();
-        }
-    }
-    
     private void showMovePhotoDialog() {
         ArrayList<String> otherAlbums = new ArrayList<>(
-            AppDataManager.getInstance(this).getAlbumNames()
+                AppDataManager.getInstance(this).getAlbumNames()
         );
         otherAlbums.remove(albumName);
         
@@ -204,54 +201,22 @@ public class PhotoActivity extends AppCompatActivity {
         String[] albumNames = otherAlbums.toArray(new String[0]);
         
         new MaterialAlertDialogBuilder(this)
-            .setTitle("Move Photo To...")
-            .setItems(albumNames, (dialog, which) -> {
-                String targetAlbum = albumNames[which];
-                movePhotoToAlbum(targetAlbum);
-            })
-            .show();
+                .setTitle("Move Photo To...")
+                .setItems(albumNames, (dialog, which) -> {
+                    String targetAlbum = albumNames[which];
+                    movePhotoToAlbum(targetAlbum);
+                })
+                .show();
     }
     
     private void movePhotoToAlbum(String targetAlbum) {
         boolean success = AppDataManager.getInstance(this).movePhotoBetweenAlbums(
-            albumName, targetAlbum, currentPhoto
+                albumName, targetAlbum, currentPhoto
         );
         
         if (success) {
             Toast.makeText(this, "Photo moved to " + targetAlbum, Toast.LENGTH_SHORT).show();
             finish();
-        } else {
-            Toast.makeText(this, "Photo already exists in target album", Toast.LENGTH_SHORT).show();
-        }
-    }
-    
-    private void showCopyPhotoDialog() {
-        ArrayList<String> otherAlbums = new ArrayList<>(
-            AppDataManager.getInstance(this).getAlbumNames()
-        );
-        otherAlbums.remove(albumName);
-        
-        if (otherAlbums.isEmpty()) {
-            Toast.makeText(this, "No other albums available", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        
-        String[] albumNames = otherAlbums.toArray(new String[0]);
-        
-        new MaterialAlertDialogBuilder(this)
-            .setTitle("Copy Photo To...")
-            .setItems(albumNames, (dialog, which) -> {
-                String targetAlbum = albumNames[which];
-                copyPhotoToAlbum(targetAlbum);
-            })
-            .show();
-    }
-    
-    private void copyPhotoToAlbum(String targetAlbum) {
-        boolean success = AppDataManager.getInstance(this).addPhotoToAlbum(targetAlbum, currentPhoto);
-        
-        if (success) {
-            Toast.makeText(this, "Photo copied to " + targetAlbum, Toast.LENGTH_SHORT).show();
         } else {
             Toast.makeText(this, "Photo already exists in target album", Toast.LENGTH_SHORT).show();
         }
