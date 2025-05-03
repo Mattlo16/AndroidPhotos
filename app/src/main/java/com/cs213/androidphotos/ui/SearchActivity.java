@@ -1,7 +1,9 @@
 package com.cs213.androidphotos.ui;
 
+import android.content.ContentResolver;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -30,6 +32,8 @@ import com.cs213.androidphotos.model.Album;
 import com.cs213.androidphotos.model.Photo;
 import com.cs213.androidphotos.util.AppDataManager;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -207,6 +211,8 @@ public class SearchActivity extends AppCompatActivity {
 
         if (searchResults.isEmpty()) {
             Toast.makeText(this, "No photos found matching your search criteria", Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(this, "Found " + searchResults.size() + " matching photos", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -251,6 +257,17 @@ public class SearchActivity extends AppCompatActivity {
                 .show();
     }
 
+    // Method to handle loading bitmaps from content URIs
+    private Bitmap getBitmapFromUri(Uri uri) throws IOException {
+        ContentResolver resolver = getContentResolver();
+        InputStream inputStream = resolver.openInputStream(uri);
+        Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+        if (inputStream != null) {
+            inputStream.close();
+        }
+        return bitmap;
+    }
+
     // Adapter for search results
     private class SearchResultAdapter extends RecyclerView.Adapter<SearchResultAdapter.SearchResultViewHolder> {
         private List<Photo> photos;
@@ -272,10 +289,20 @@ public class SearchActivity extends AppCompatActivity {
             Photo photo = photos.get(position);
 
             try {
-                Bitmap bitmap = BitmapFactory.decodeFile(photo.getFilePath());
-                holder.imageView.setImageBitmap(bitmap);
+                String filePath = photo.getFilePath();
+                if (filePath.startsWith("content://")) {
+                    // Handle content URI images
+                    Uri photoUri = Uri.parse(filePath);
+                    holder.imageView.setImageBitmap(getBitmapFromUri(photoUri));
+                } else {
+                    // Handle local file images
+                    Bitmap bitmap = BitmapFactory.decodeFile(photo.getFilePath());
+                    holder.imageView.setImageBitmap(bitmap);
+                }
             } catch (Exception e) {
+                e.printStackTrace();
                 holder.imageView.setImageResource(android.R.drawable.ic_menu_gallery);
+                Toast.makeText(SearchActivity.this, "Error loading image: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             }
         }
 
