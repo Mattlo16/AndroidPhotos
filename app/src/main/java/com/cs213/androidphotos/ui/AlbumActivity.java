@@ -116,7 +116,6 @@ public class AlbumActivity extends AppCompatActivity {
                 }
                 
                 ImageView imageView = itemView.findViewById(R.id.photoImageView);
-                ImageButton deleteButton = itemView.findViewById(R.id.deletePhotoButton);
                 
                 Photo photo = getItem(position);
                 if (photo != null) {
@@ -130,16 +129,7 @@ public class AlbumActivity extends AppCompatActivity {
                             imageView.setImageBitmap(bitmap);
                         }
                         
-                        // Set up delete button click listener
-                        deleteButton.setOnClickListener(v -> {
-                            // Stop the click event from propagating
-                            v.getParent().requestDisallowInterceptTouchEvent(true);
-                            confirmDeletePhoto(photo);
-                        });
-                        
-                        // Make the image view explicitly clickable and handle the click
                         imageView.setOnClickListener(v -> {
-                            // Add a toast to verify the click is detected
                             Toast.makeText(AlbumActivity.this, "Opening photo: " + photo.getFileName(), Toast.LENGTH_SHORT).show();
                             openPhotoView(photo);
                         });
