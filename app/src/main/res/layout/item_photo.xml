@@ -12,4 +12,12 @@
         android:background="@color/colorSurface"
         android:contentDescription="@string/photo_description" />
 
+    <ImageButton
+        android:id="@+id/deletePhotoButton"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_gravity="top|end"
+        android:background="@android:drawable/ic_menu_delete"
+        android:contentDescription="@string/delete_photo" />
+
 </FrameLayout>
