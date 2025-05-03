@@ -16,7 +16,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -109,13 +108,13 @@ public class PhotoActivity extends AppCompatActivity {
         tagsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         tagsAdapter = new TagsAdapter(new ArrayList<>());
         tagsRecyclerView.setAdapter(tagsAdapter);
-
+        
         ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_spinner_item,
                 new String[]{"Person", "Location"});
         spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         tagTypeSpinner.setAdapter(spinnerAdapter);
-
+        
         albumName = getIntent().getStringExtra("albumName");
         String photoPath = getIntent().getStringExtra("photoPath");
         
@@ -123,7 +122,7 @@ public class PhotoActivity extends AppCompatActivity {
             showErrorAndFinish("Invalid photo data");
             return;
         }
-
+        
         Album album = AppDataManager.getInstance(this).getAlbum(albumName);
         if (album == null) {
             showErrorAndFinish("Album not found");
@@ -137,7 +136,7 @@ public class PhotoActivity extends AppCompatActivity {
         }
         
         setTitle("Photo");
-
+        
         addTagButton.setOnClickListener(v -> onAddTagClick());
         slideshowButton.setOnClickListener(v -> startSlideshow());
         moveToAlbumButton.setOnClickListener(v -> showMovePhotoDialog());
@@ -169,10 +168,6 @@ public class PhotoActivity extends AppCompatActivity {
         
         captionTextView.setText(currentPhoto.getFilePath());
         
-        updateTagsList();
-    }
-    
-    private void updateTagsList() {
         if (currentPhoto.getTags() != null) {
             tagsAdapter.updateTags(currentPhoto.getTags());
         }
@@ -187,14 +182,16 @@ public class PhotoActivity extends AppCompatActivity {
             return;
         }
         
-        Tag newTag = new Tag(tagName, tagValue);
-        if (currentPhoto.addTag(newTag)) {
-            AppDataManager.getInstance(this).updatePhoto(albumName, currentPhoto);
+        if (AppDataManager.getInstance(this).addTagToPhoto(currentPhoto, tagName, tagValue)) {
             tagValueEditText.setText("");
             updateTagsList();
         } else {
             Toast.makeText(this, "Tag already exists on this photo", Toast.LENGTH_SHORT).show();
         }
+    }
+    
+    private void updateTagsList() {
+        tagsAdapter.updateTags(currentPhoto.getTags());
     }
     
     private void startSlideshow() {
@@ -227,15 +224,16 @@ public class PhotoActivity extends AppCompatActivity {
     }
     
     private void movePhotoToAlbum(String targetAlbum) {
-        boolean success = AppDataManager.getInstance(this).movePhotoBetweenAlbums(
-                albumName, targetAlbum, currentPhoto
-        );
+        Album sourceAlbum = AppDataManager.getInstance(this).getAlbum(albumName);
+        Album destAlbum = AppDataManager.getInstance(this).getAlbum(targetAlbum);
         
-        if (success) {
-            Toast.makeText(this, "Photo moved to " + targetAlbum, Toast.LENGTH_SHORT).show();
-            finish();
-        } else {
-            Toast.makeText(this, "Photo already exists in target album", Toast.LENGTH_SHORT).show();
+        if (sourceAlbum != null && destAlbum != null) {
+            if (AppDataManager.getInstance(this).movePhoto(sourceAlbum, destAlbum, currentPhoto)) {
+                Toast.makeText(this, "Photo moved to " + targetAlbum, Toast.LENGTH_SHORT).show();
+                finish();
+            } else {
+                Toast.makeText(this, "Failed to move photo", Toast.LENGTH_SHORT).show();
+            }
         }
     }
     
