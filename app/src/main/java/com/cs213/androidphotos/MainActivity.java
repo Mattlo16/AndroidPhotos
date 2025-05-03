@@ -78,20 +78,30 @@ public class MainActivity extends AppCompatActivity {
 
     private void displayAlbums() {
         albumsGrid.removeAllViews();
-
+    
         for (Album album : dataManager.getAlbums()) {
             View albumView = getLayoutInflater().inflate(R.layout.item_album, albumsGrid, false);
             TextView albumNameTextView = albumView.findViewById(R.id.albumNameTextView);
             Button openButton = albumView.findViewById(R.id.openAlbumButton);
             Button deleteButton = albumView.findViewById(R.id.deleteAlbumButton);
             Button renameButton = albumView.findViewById(R.id.renameAlbumButton);
-
+    
             albumNameTextView.setText(album.getName());
-
+    
             openButton.setOnClickListener(v -> openAlbum(album));
             deleteButton.setOnClickListener(v -> confirmDeleteAlbum(album));
             renameButton.setOnClickListener(v -> showRenameDialog(album));
-
+            
+            // Set explicit layout parameters for the grid
+            GridLayout.LayoutParams params = new GridLayout.LayoutParams();
+            params.width = GridLayout.LayoutParams.WRAP_CONTENT;
+            params.height = GridLayout.LayoutParams.WRAP_CONTENT;
+            params.setMargins(8, 8, 8, 8); // Add margins around each album
+            
+            // Make sure the album takes up one column width
+            params.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
+            albumView.setLayoutParams(params);
+    
             albumsGrid.addView(albumView);
         }
     }
