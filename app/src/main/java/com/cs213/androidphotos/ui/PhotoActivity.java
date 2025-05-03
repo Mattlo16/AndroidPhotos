@@ -108,18 +108,13 @@ public class PhotoActivity extends AppCompatActivity {
         moveToAlbumButton = findViewById(R.id.moveToAlbumButton);
         backToAlbumButton = findViewById(R.id.backToAlbumButton);
 
-        // Initialize deletePhotoButton - this assumes you have a button with ID 'deletePhotoButton' in your layout
+    
         deletePhotoButton = findViewById(R.id.deletePhotoButton);
         
-        // If the button doesn't exist in the layout yet, you'll need to add it to activity_photo.xml
-        // If it doesn't exist in the XML, you can handle the null case or create it programmatically
+
         if (deletePhotoButton == null) {
-            // For demonstration purposes only - you should add this button to your XML layout instead
-            // This code will not work without proper layout parameters and positioning
             deletePhotoButton = new Button(this);
             deletePhotoButton.setText("Delete Photo");
-            // Add to parent layout
-            // This is just a placeholder - you should modify the XML layout instead
         }
 
         ArrayAdapter<CharSequence> spinnerAdapter = ArrayAdapter.createFromResource(
