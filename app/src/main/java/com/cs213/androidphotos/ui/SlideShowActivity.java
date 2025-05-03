@@ -127,7 +127,7 @@ public class SlideShowActivity extends AppCompatActivity {
         @Override
         public PhotoViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             View view = LayoutInflater.from(parent.getContext())
-                    .inflate(R.layout.item_photo_pager, parent, false);
+                    .inflate(R.layout.item_slideshow, parent, false);
             return new PhotoViewHolder(view);
         }
 
@@ -149,27 +149,22 @@ public class SlideShowActivity extends AppCompatActivity {
                 holder.photoImageView.setImageResource(android.R.drawable.ic_menu_gallery);
             }
             
-            // Display file name
-            holder.fileNameTextView.setText(photo.getFileName());
+            // Build caption text with filename and tags
+            StringBuilder captionBuilder = new StringBuilder(photo.getFileName());
             
-            // Display tags if any
-            StringBuilder tagsInfo = new StringBuilder();
             List<Tag> tags = photo.getTags();
-            
             if (tags != null && !tags.isEmpty()) {
-                tagsInfo.append("Tags: ");
+                captionBuilder.append("\nTags: ");
                 for (int i = 0; i < tags.size(); i++) {
                     Tag tag = tags.get(i);
-                    tagsInfo.append(tag.getType()).append(": ").append(tag.getValue());
+                    captionBuilder.append(tag.getType()).append(": ").append(tag.getValue());
                     if (i < tags.size() - 1) {
-                        tagsInfo.append(", ");
+                        captionBuilder.append(", ");
                     }
                 }
             }
             
-            holder.tagsTextView.setText(tagsInfo.toString());
-            // Show/hide tags view based on whether there are tags
-            holder.tagsTextView.setVisibility(tagsInfo.length() > 0 ? View.VISIBLE : View.GONE);
+            holder.captionTextView.setText(captionBuilder.toString());
         }
 
         @Override
@@ -179,14 +174,12 @@ public class SlideShowActivity extends AppCompatActivity {
 
         class PhotoViewHolder extends androidx.recyclerview.widget.RecyclerView.ViewHolder {
             ImageView photoImageView;
-            TextView fileNameTextView;
-            TextView tagsTextView;
+            TextView captionTextView;
 
             PhotoViewHolder(View itemView) {
                 super(itemView);
-                photoImageView = itemView.findViewById(R.id.pagerPhotoImageView);
-                fileNameTextView = itemView.findViewById(R.id.pagerFileNameTextView);
-                tagsTextView = itemView.findViewById(R.id.pagerTagsTextView);
+                photoImageView = itemView.findViewById(R.id.slideshowImageView);
+                captionTextView = itemView.findViewById(R.id.slideshowCaptionTextView);
             }
         }
     }
