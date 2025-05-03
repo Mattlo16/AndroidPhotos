@@ -1,57 +1,55 @@
 package com.cs213.androidphotos.ui;
 
 import android.graphics.Bitmap;
-import android.net.Uri;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
-import android.provider.MediaStore;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.viewpager2.widget.ViewPager2;
 
 import com.cs213.androidphotos.R;
 import com.cs213.androidphotos.model.Album;
-import com.cs213.androidphotos.util.AppDataManager;
 import com.cs213.androidphotos.model.Photo;
+import com.cs213.androidphotos.util.AppDataManager;
 
-import java.io.IOException;
-import java.text.SimpleDateFormat;
 import java.util.List;
-import java.util.Locale;
 
 public class SlideShowActivity extends AppCompatActivity {
-
-    private ImageView photoImageView;
-    private TextView captionTextView;
-    private TextView dateTextView;
-    private TextView positionTextView;
-    private Button prevButton;
-    private Button nextButton;
-
+    private AppDataManager dataManager;
+    private Album album;
     private List<Photo> photos;
-    private int currentPosition = 0;
+
+    private ViewPager2 slideshowViewPager;
+    private Button previousButton;
+    private Button exitButton;
+    private Button nextButton;
+    private TextView slideshowTitleTextView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_slideshow);
 
-        photoImageView = findViewById(R.id.slideshow_image);
-        captionTextView = findViewById(R.id.slideshow_caption);
-        dateTextView = findViewById(R.id.slideshow_date);
-        positionTextView = findViewById(R.id.slideshow_position);
-        prevButton = findViewById(R.id.prev_button);
-        nextButton = findViewById(R.id.next_button);
-
+        // Get data from intent
         String albumName = getIntent().getStringExtra("albumName");
+        String currentPhotoPath = getIntent().getStringExtra("currentPhotoPath");
+
         if (albumName == null) {
             finish();
             return;
         }
 
-        Album album = AppDataManager.getInstance().getAlbum(albumName);
+        // Initialize data
+        dataManager = AppDataManager.getInstance(this);
+        album = dataManager.getAlbum(albumName);
+
         if (album == null) {
             finish();
             return;
@@ -63,58 +61,97 @@ public class SlideShowActivity extends AppCompatActivity {
             return;
         }
 
-        prevButton.setOnClickListener(v -> showPreviousPhoto());
-        nextButton.setOnClickListener(v -> showNextPhoto());
+        // Initialize views
+        slideshowViewPager = findViewById(R.id.slideshowViewPager);
+        previousButton = findViewById(R.id.previousButton);
+        exitButton = findViewById(R.id.exitSlideshowButton);
+        nextButton = findViewById(R.id.nextButton);
+        slideshowTitleTextView = findViewById(R.id.slideshowTitleTextView);
 
-        showPhoto(currentPosition);
-    }
+        // Set title
+        slideshowTitleTextView.setText(getString(R.string.slideshow_title) + " - " + albumName);
 
-    private void showPhoto(int position) {
-        if (position < 0 || position >= photos.size()) {
-            return;
+        // Set up ViewPager
+        PhotoPagerAdapter adapter = new PhotoPagerAdapter();
+        slideshowViewPager.setAdapter(adapter);
+
+        // Start at the selected photo if provided
+        if (currentPhotoPath != null) {
+            for (int i = 0; i < photos.size(); i++) {
+                if (photos.get(i).getFilePath().equals(currentPhotoPath)) {
+                    slideshowViewPager.setCurrentItem(i, false);
+                    break;
+                }
+            }
         }
 
-        Photo photo = photos.get(position);
-        
-        try {
-            Bitmap bitmap = MediaStore.Images.Media.getBitmap(
-                getContentResolver(), 
-                Uri.parse(photo.getUri()));
-            photoImageView.setImageBitmap(bitmap);
-        } catch (IOException e) {
-            photoImageView.setImageResource(R.drawable.ic_broken_image);
-        }
+        // Set up button listeners
+        previousButton.setOnClickListener(v -> {
+            int currentPosition = slideshowViewPager.getCurrentItem();
+            if (currentPosition > 0) {
+                slideshowViewPager.setCurrentItem(currentPosition - 1);
+            }
+        });
 
-        captionTextView.setText(photo.getCaption().isEmpty() ? 
-            "(No caption)" : photo.getCaption());
+        nextButton.setOnClickListener(v -> {
+            int currentPosition = slideshowViewPager.getCurrentItem();
+            if (currentPosition < photos.size() - 1) {
+                slideshowViewPager.setCurrentItem(currentPosition + 1);
+            }
+        });
 
-        SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy", Locale.getDefault());
-        dateTextView.setText(dateFormat.format(photo.getDate()));
+        exitButton.setOnClickListener(v -> finish());
 
-        positionTextView.setText(String.format(Locale.getDefault(), 
-            "%d of %d", position + 1, photos.size()));
-
-        prevButton.setEnabled(position > 0);
-        nextButton.setEnabled(position < photos.size() - 1);
+        // Update button states based on position
+        slideshowViewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
+            @Override
+            public void onPageSelected(int position) {
+                previousButton.setEnabled(position > 0);
+                nextButton.setEnabled(position < photos.size() - 1);
+            }
+        });
     }
 
-    private void showPreviousPhoto() {
-        if (currentPosition > 0) {
-            currentPosition--;
-            showPhoto(currentPosition);
-        }
-    }
+    private class PhotoPagerAdapter extends androidx.recyclerview.widget.RecyclerView.Adapter<PhotoPagerAdapter.PhotoViewHolder> {
 
-    private void showNextPhoto() {
-        if (currentPosition < photos.size() - 1) {
-            currentPosition++;
-            showPhoto(currentPosition);
+        @NonNull
+        @Override
+        public PhotoViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_slideshow, parent, false);
+            return new PhotoViewHolder(view);
         }
-    }
 
-    @Override
-    public void onBackPressed() {
-        super.onBackPressed();
-        overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
+        @Override
+        public void onBindViewHolder(@NonNull PhotoViewHolder holder, int position) {
+            Photo photo = photos.get(position);
+
+            // Load image
+            try {
+                Bitmap bitmap = BitmapFactory.decodeFile(photo.getFilePath());
+                holder.imageView.setImageBitmap(bitmap);
+            } catch (Exception e) {
+                holder.imageView.setImageResource(android.R.drawable.ic_menu_gallery);
+            }
+
+            // Set caption
+            holder.captionTextView.setText(photo.getFileName());
+        }
+
+        @Override
+        public int getItemCount() {
+            return photos.size();
+        }
+
+        class PhotoViewHolder extends androidx.recyclerview.widget.RecyclerView.ViewHolder {
+            ImageView imageView;
+            TextView captionTextView;
+
+            PhotoViewHolder(View itemView) {
+                super(itemView);
+                imageView = itemView.findViewById(R.id.slideshowImageView);
+                captionTextView = itemView.findViewById(R.id.slideshowCaptionTextView);
+            }
+        }
     }
 }

@@ -15,7 +15,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -25,12 +25,14 @@ import com.cs213.androidphotos.model.Album;
 import com.cs213.androidphotos.model.Photo;
 import com.cs213.androidphotos.model.Tag;
 import com.cs213.androidphotos.util.AppDataManager;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class PhotoActivity extends AppCompatActivity {
+    private AppDataManager dataManager;
+    private Album album;
+    private Photo photo;
 
     private ImageView photoImageView;
     private TextView captionTextView;
@@ -41,60 +43,63 @@ public class PhotoActivity extends AppCompatActivity {
     private Button slideshowButton;
     private Button moveToAlbumButton;
     private Button backToAlbumButton;
-    
-    private String albumName;
-    private Photo currentPhoto;
-    private TagsAdapter tagsAdapter;
 
-    private class TagsAdapter extends RecyclerView.Adapter<TagsAdapter.TagViewHolder> {
-        private List<Tag> tags;
-
-        public TagsAdapter(List<Tag> tags) {
-            this.tags = tags;
-        }
-
-        public void updateTags(List<Tag> newTags) {
-            this.tags = newTags;
-            notifyDataSetChanged();
-        }
-
-        @NonNull
-        @Override
-        public TagViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View view = LayoutInflater.from(parent.getContext())
-                    .inflate(android.R.layout.simple_list_item_1, parent, false);
-            return new TagViewHolder(view);
-        }
-
-        @Override
-        public void onBindViewHolder(@NonNull TagViewHolder holder, int position) {
-            holder.bind(tags.get(position));
-        }
-
-        @Override
-        public int getItemCount() {
-            return tags.size();
-        }
-
-        class TagViewHolder extends RecyclerView.ViewHolder {
-            private final TextView textView;
-
-            public TagViewHolder(@NonNull View itemView) {
-                super(itemView);
-                textView = itemView.findViewById(android.R.id.text1);
-            }
-
-            public void bind(Tag tag) {
-                textView.setText(tag.getType() + ": " + tag.getValue());
-            }
-        }
-    }
+    private TagAdapter tagAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_photo);
-        
+
+        // Get album and photo from intent
+        String albumName = getIntent().getStringExtra("albumName");
+        String photoPath = getIntent().getStringExtra("photoPath");
+
+        if (albumName == null || photoPath == null) {
+            Toast.makeText(this, "Error: Missing album or photo information", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+
+        // Initialize AppDataManager and get data
+        dataManager = AppDataManager.getInstance(this);
+        album = dataManager.getAlbum(albumName);
+
+        if (album == null) {
+            Toast.makeText(this, "Error: Album not found", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+
+        // Find photo in album
+        photo = null;
+        for (Photo p : album.getPhotos()) {
+            if (p.getFilePath().equals(photoPath)) {
+                photo = p;
+                break;
+            }
+        }
+
+        if (photo == null) {
+            Toast.makeText(this, "Error: Photo not found in album", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+
+        // Initialize UI components
+        initializeViews();
+
+        // Load photo and details
+        loadPhotoDetails();
+
+        // Setup tag adapter
+        setupTagAdapter();
+
+        // Setup button listeners
+        setupButtonListeners();
+    }
+
+    private void initializeViews() {
         photoImageView = findViewById(R.id.photoImageView);
         captionTextView = findViewById(R.id.captionTextView);
         tagsRecyclerView = findViewById(R.id.tagsRecyclerView);
@@ -104,143 +109,154 @@ public class PhotoActivity extends AppCompatActivity {
         slideshowButton = findViewById(R.id.slideshowButton);
         moveToAlbumButton = findViewById(R.id.moveToAlbumButton);
         backToAlbumButton = findViewById(R.id.backToAlbumButton);
-        
-        tagsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
-        tagsAdapter = new TagsAdapter(new ArrayList<>());
-        tagsRecyclerView.setAdapter(tagsAdapter);
-        
-        ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_item,
-                new String[]{"Person", "Location"});
+
+        // Set up tag type spinner
+        ArrayAdapter<CharSequence> spinnerAdapter = ArrayAdapter.createFromResource(
+                this, R.array.tag_types, android.R.layout.simple_spinner_item);
         spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         tagTypeSpinner.setAdapter(spinnerAdapter);
-        
-        albumName = getIntent().getStringExtra("albumName");
-        String photoPath = getIntent().getStringExtra("photoPath");
-        
-        if (albumName == null || photoPath == null) {
-            showErrorAndFinish("Invalid photo data");
-            return;
-        }
-        
-        Album album = AppDataManager.getInstance(this).getAlbum(albumName);
-        if (album == null) {
-            showErrorAndFinish("Album not found");
-            return;
-        }
-        
-        currentPhoto = findPhotoByPath(album, photoPath);
-        if (currentPhoto == null) {
-            showErrorAndFinish("Photo not found in album");
-            return;
-        }
-        
-        setTitle("Photo");
-        
-        addTagButton.setOnClickListener(v -> onAddTagClick());
-        slideshowButton.setOnClickListener(v -> startSlideshow());
-        moveToAlbumButton.setOnClickListener(v -> showMovePhotoDialog());
-        backToAlbumButton.setOnClickListener(v -> finish());
-        
-        loadPhotoDetails();
     }
 
-    private Photo findPhotoByPath(Album album, String photoPath) {
-        for (Photo photo : album.getPhotos()) {
-            if (photo.getFilePath().equals(photoPath)) {
-                return photo;
-            }
-        }
-        return null;
-    }
-    
     private void loadPhotoDetails() {
+        // Load image
         try {
-            Bitmap bitmap = BitmapFactory.decodeFile(currentPhoto.getFilePath());
-            if (bitmap != null) {
-                photoImageView.setImageBitmap(bitmap);
-            } else {
-                photoImageView.setImageResource(android.R.drawable.ic_menu_gallery);
-            }
+            Bitmap bitmap = BitmapFactory.decodeFile(photo.getFilePath());
+            photoImageView.setImageBitmap(bitmap);
         } catch (Exception e) {
             photoImageView.setImageResource(android.R.drawable.ic_menu_gallery);
         }
-        
-        captionTextView.setText(currentPhoto.getFilePath());
-        
-        if (currentPhoto.getTags() != null) {
-            tagsAdapter.updateTags(currentPhoto.getTags());
-        }
+
+        // Set caption (filename)
+        captionTextView.setText(photo.getFileName());
     }
-    
-    private void onAddTagClick() {
-        String tagName = tagTypeSpinner.getSelectedItem().toString();
+
+    private void setupTagAdapter() {
+        tagAdapter = new TagAdapter(photo.getTags());
+        tagsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        tagsRecyclerView.setAdapter(tagAdapter);
+    }
+
+    private void setupButtonListeners() {
+        addTagButton.setOnClickListener(v -> addTagToPhoto());
+
+        slideshowButton.setOnClickListener(v -> {
+            Intent intent = new Intent(PhotoActivity.this, SlideShowActivity.class);
+            intent.putExtra("albumName", album.getName());
+            intent.putExtra("currentPhotoPath", photo.getFilePath());
+            startActivity(intent);
+        });
+
+        moveToAlbumButton.setOnClickListener(v -> showMovePhotoDialog());
+
+        backToAlbumButton.setOnClickListener(v -> finish());
+    }
+
+    private void addTagToPhoto() {
+        String tagType = tagTypeSpinner.getSelectedItem().toString();
         String tagValue = tagValueEditText.getText().toString().trim();
-        
+
         if (tagValue.isEmpty()) {
             Toast.makeText(this, "Tag value cannot be empty", Toast.LENGTH_SHORT).show();
             return;
         }
-        
-        if (AppDataManager.getInstance(this).addTagToPhoto(currentPhoto, tagName, tagValue)) {
+
+        if (dataManager.addTagToPhoto(photo, tagType, tagValue)) {
+            tagAdapter.notifyDataSetChanged();
             tagValueEditText.setText("");
-            updateTagsList();
+            Toast.makeText(this, "Tag added successfully", Toast.LENGTH_SHORT).show();
         } else {
-            Toast.makeText(this, "Tag already exists on this photo", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Failed to add tag or tag already exists", Toast.LENGTH_SHORT).show();
         }
     }
-    
-    private void updateTagsList() {
-        tagsAdapter.updateTags(currentPhoto.getTags());
-    }
-    
-    private void startSlideshow() {
-        Intent intent = new Intent(this, SlideShowActivity.class);
-        intent.putExtra("albumName", albumName);
-        intent.putExtra("photoPath", currentPhoto.getFilePath());
-        startActivity(intent);
-    }
-    
+
     private void showMovePhotoDialog() {
-        List<Album> allAlbums = AppDataManager.getInstance(this).getAlbums();
-        List<String> otherAlbumNames = new ArrayList<>();
-        
-        for (Album album : allAlbums) {
-            if (!album.getName().equals(albumName)) {
-                otherAlbumNames.add(album.getName());
+        List<String> albumNames = new ArrayList<>();
+        for (Album a : dataManager.getAlbums()) {
+            if (!a.getName().equals(album.getName())) {
+                albumNames.add(a.getName());
             }
         }
-        
-        if (otherAlbumNames.isEmpty()) {
+
+        if (albumNames.isEmpty()) {
             Toast.makeText(this, "No other albums available", Toast.LENGTH_SHORT).show();
             return;
         }
-        
-        new MaterialAlertDialogBuilder(this)
+
+        String[] items = albumNames.toArray(new String[0]);
+
+        new AlertDialog.Builder(this)
                 .setTitle("Move Photo To...")
-                .setItems(otherAlbumNames.toArray(new String[0]), (dialog, which) -> {
-                    String targetAlbum = otherAlbumNames.get(which);
-                    movePhotoToAlbum(targetAlbum);
+                .setItems(items, (dialog, which) -> {
+                    String targetAlbumName = items[which];
+                    Album targetAlbum = dataManager.getAlbum(targetAlbumName);
+
+                    if (targetAlbum != null) {
+                        if (dataManager.movePhoto(album, targetAlbum, photo)) {
+                            Toast.makeText(this, "Photo moved successfully", Toast.LENGTH_SHORT).show();
+                            finish(); // Return to album view
+                        } else {
+                            Toast.makeText(this, "Failed to move photo", Toast.LENGTH_SHORT).show();
+                        }
+                    }
                 })
                 .show();
     }
-    
-    private void movePhotoToAlbum(String targetAlbum) {
-        Album sourceAlbum = AppDataManager.getInstance(this).getAlbum(albumName);
-        Album destAlbum = AppDataManager.getInstance(this).getAlbum(targetAlbum);
-        
-        if (sourceAlbum != null && destAlbum != null) {
-            if (AppDataManager.getInstance(this).movePhoto(sourceAlbum, destAlbum, currentPhoto)) {
-                Toast.makeText(this, "Photo moved to " + targetAlbum, Toast.LENGTH_SHORT).show();
-                finish();
-            } else {
-                Toast.makeText(this, "Failed to move photo", Toast.LENGTH_SHORT).show();
+
+    // Tag adapter for RecyclerView
+    private class TagAdapter extends RecyclerView.Adapter<TagAdapter.TagViewHolder> {
+        private List<Tag> tags;
+
+        public TagAdapter(List<Tag> tags) {
+            this.tags = tags;
+        }
+
+        @Override
+        public TagViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(parent.getContext())
+                    .inflate(android.R.layout.simple_list_item_1, parent, false);
+            return new TagViewHolder(view);
+        }
+
+        @Override
+        public void onBindViewHolder(TagViewHolder holder, int position) {
+            Tag tag = tags.get(position);
+            holder.tagTextView.setText(tag.getType() + ": " + tag.getValue());
+
+            holder.itemView.setOnLongClickListener(v -> {
+                showDeleteTagDialog(position);
+                return true;
+            });
+        }
+
+        @Override
+        public int getItemCount() {
+            return tags.size();
+        }
+
+        class TagViewHolder extends RecyclerView.ViewHolder {
+            TextView tagTextView;
+
+            TagViewHolder(View itemView) {
+                super(itemView);
+                tagTextView = (TextView) itemView.findViewById(android.R.id.text1);
             }
         }
     }
-    
-    private void showErrorAndFinish(String message) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
-        finish();
+
+    private void showDeleteTagDialog(int position) {
+        new AlertDialog.Builder(this)
+                .setTitle("Delete Tag")
+                .setMessage("Are you sure you want to delete this tag?")
+                .setPositiveButton(R.string.yes, (dialog, which) -> {
+                    Tag tagToDelete = photo.getTags().get(position);
+                    if (dataManager.removeTagFromPhoto(photo, tagToDelete)) {
+                        tagAdapter.notifyDataSetChanged();
+                        Toast.makeText(this, "Tag deleted", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(this, "Failed to delete tag", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton(R.string.no, null)
+                .show();
     }
 }
