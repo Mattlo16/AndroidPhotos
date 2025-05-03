@@ -19,6 +19,7 @@ import android.widget.EditText;
 import android.database.Cursor;
 import android.provider.DocumentsContract;
 import android.content.ContentResolver;
+import android.widget.ImageButton;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
@@ -146,7 +147,6 @@ public class AlbumActivity extends AppCompatActivity {
     
         photosGridView.setAdapter(photoAdapter);
     }
-
     private void showPhotoOptionsDialog(Photo photo) {
         String[] options = {"View Photo", "Start Slideshow", "Delete Photo"};
 
