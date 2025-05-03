@@ -78,10 +78,6 @@ public class AlbumActivity extends AppCompatActivity {
         albumNameTextView.setText(album.getName());
 
         setupPhotoAdapter();
-        
-        // Debug code - check if photos are actually in the album and print count
-        int photoCount = album.getPhotos() != null ? album.getPhotos().size() : 0;
-        Toast.makeText(this, "Album has " + photoCount + " photos", Toast.LENGTH_SHORT).show();
 
         // Set click listeners
         addPhotoButton.setOnClickListener(v -> openPhotoSelector());
@@ -126,21 +122,11 @@ public class AlbumActivity extends AppCompatActivity {
         // Refresh the data when returning to this activity
         if (album != null) {
             album = dataManager.getAlbum(album.getName()); // Get fresh data
-            if (album != null) {
-                int photoCount = album.getPhotos() != null ? album.getPhotos().size() : 0;
-                Toast.makeText(this, "Resuming - album has " + photoCount + " photos", Toast.LENGTH_SHORT).show();
-                
-                if (photoAdapter != null) {
-                    photoAdapter.clear();
-                    if (album.getPhotos() != null) {
-                        photoAdapter.addAll(album.getPhotos());
-                    }
-                    photoAdapter.notifyDataSetChanged();
-                    updateEmptyState();
-                }
-            } else {
-                Toast.makeText(this, "Error: Album no longer exists", Toast.LENGTH_SHORT).show();
-                finish();
+            if (photoAdapter != null) {
+                photoAdapter.clear();
+                photoAdapter.addAll(album.getPhotos());
+                photoAdapter.notifyDataSetChanged();
+                updateEmptyState();
             }
         }
     }
@@ -148,7 +134,7 @@ public class AlbumActivity extends AppCompatActivity {
     private void updateEmptyState() {
         // If you have an empty state text view, update its visibility
         // if (emptyAlbumTextView != null) {
-        //     if (album.getPhotos() == null || album.getPhotos().isEmpty()) {
+        //     if (album.getPhotos().isEmpty()) {
         //         emptyAlbumTextView.setVisibility(View.VISIBLE);
         //         photosGridView.setVisibility(View.GONE);
         //     } else {
@@ -161,51 +147,43 @@ public class AlbumActivity extends AppCompatActivity {
     private void setupPhotoAdapter() {
         // Make sure we're working with a valid list
         if (album.getPhotos() == null) {
-            // Initialize an adapter with an empty list
-            photoAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, new ArrayList<>());
-            Toast.makeText(this, "Warning: Album has no photos list", Toast.LENGTH_SHORT).show();
-        } else {
-            photoAdapter = new ArrayAdapter<Photo>(this, android.R.layout.simple_list_item_1, album.getPhotos()) {
-                @Override
-                public View getView(int position, View convertView, ViewGroup parent) {
-                    ImageView imageView;
-
-                    if (convertView == null) {
-                        imageView = new ImageView(AlbumActivity.this);
-                        imageView.setLayoutParams(new GridView.LayoutParams(200, 200));
-                        imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                        imageView.setPadding(8, 8, 8, 8);
-                    } else {
-                        imageView = (ImageView) convertView;
-                    }
-
-                    Photo photo = getItem(position);
-                    if (photo != null) {
-                        try {
-                            String filePath = photo.getFilePath();
-                            if (filePath != null) {
-                                if (filePath.startsWith("content://")) {
-                                    Uri photoUri = Uri.parse(filePath);
-                                    imageView.setImageBitmap(getBitmapFromUri(photoUri));
-                                } else {
-                                    Bitmap bitmap = BitmapFactory.decodeFile(photo.getFilePath());
-                                    imageView.setImageBitmap(bitmap);
-                                }
-                            } else {
-                                imageView.setImageResource(android.R.drawable.ic_menu_gallery);
-                                Toast.makeText(AlbumActivity.this, "Photo at position " + position + " has null filepath", Toast.LENGTH_SHORT).show();
-                            }
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                            imageView.setImageResource(android.R.drawable.ic_menu_gallery);
-                            Toast.makeText(AlbumActivity.this, "Error loading photo at position " + position + ": " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                        }
-                    }
-
-                    return imageView;
-                }
-            };
+            album.setPhotos(new ArrayList<>());
         }
+        
+        photoAdapter = new ArrayAdapter<Photo>(this, android.R.layout.simple_list_item_1, album.getPhotos()) {
+            @Override
+            public View getView(int position, View convertView, ViewGroup parent) {
+                ImageView imageView;
+
+                if (convertView == null) {
+                    imageView = new ImageView(AlbumActivity.this);
+                    imageView.setLayoutParams(new GridView.LayoutParams(200, 200));
+                    imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                    imageView.setPadding(8, 8, 8, 8);
+                } else {
+                    imageView = (ImageView) convertView;
+                }
+
+                Photo photo = getItem(position);
+                if (photo != null) {
+                    try {
+                        String filePath = photo.getFilePath();
+                        if (filePath.startsWith("content://")) {
+                            Uri photoUri = Uri.parse(filePath);
+                            imageView.setImageBitmap(getBitmapFromUri(photoUri));
+                        } else {
+                            Bitmap bitmap = BitmapFactory.decodeFile(photo.getFilePath());
+                            imageView.setImageBitmap(bitmap);
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        imageView.setImageResource(android.R.drawable.ic_menu_gallery);
+                    }
+                }
+
+                return imageView;
+            }
+        };
 
         photosGridView.setAdapter(photoAdapter);
     }
@@ -243,7 +221,7 @@ public class AlbumActivity extends AppCompatActivity {
 
     private void startSlideshow(Photo startPhoto) {
         try {
-            if (album.getPhotos() == null || album.getPhotos().isEmpty()) {
+            if (album.getPhotos().isEmpty()) {
                 Toast.makeText(this, "Album is empty. Add photos first.", Toast.LENGTH_SHORT).show();
                 return;
             }
@@ -274,16 +252,9 @@ public class AlbumActivity extends AppCompatActivity {
                     .setPositiveButton(R.string.yes, (dialog, which) -> {
                         try {
                             if (dataManager.removePhotoFromAlbum(album, photo)) {
-                                // Double-check that the photo was actually removed
-                                album = dataManager.getAlbum(album.getName()); // Refresh album data
-                                photoAdapter.clear();
-                                photoAdapter.addAll(album.getPhotos());
+                                photoAdapter.remove(photo);
                                 photoAdapter.notifyDataSetChanged();
                                 updateEmptyState();
-                                
-                                // Important: Save data changes to persist the removal
-                                dataManager.saveData();
-                                
                                 Toast.makeText(this, "Photo deleted successfully", Toast.LENGTH_SHORT).show();
                             } else {
                                 Toast.makeText(this, "Failed to delete photo", Toast.LENGTH_SHORT).show();
@@ -322,40 +293,25 @@ public class AlbumActivity extends AppCompatActivity {
                 Uri photoUri = data.getData();
                 if (photoUri != null) {
                     try {
-                        // Take a persistent permission to the URI
                         getContentResolver().takePersistableUriPermission(
                                 photoUri,
                                 Intent.FLAG_GRANT_READ_URI_PERMISSION
                         );
                     } catch (SecurityException e) {
                         e.printStackTrace();
-                        Toast.makeText(this, "Security error with URI: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                     }
 
                     String uriString = photoUri.toString();
-                    // Print debug info about the URI
-                    Toast.makeText(this, "Adding photo URI: " + uriString, Toast.LENGTH_SHORT).show();
-                    
                     Photo newPhoto = dataManager.addPhotoToAlbum(album, uriString);
 
                     if (newPhoto != null) {
-                        // Very important: Save data changes to persist the photo
-                        boolean saved = dataManager.saveData();
-                        Toast.makeText(this, "Save result after adding: " + saved, Toast.LENGTH_SHORT).show();
-                        
-                        // Refresh the album from storage to get updated photo list
-                        album = dataManager.getAlbum(album.getName());
-                        
-                        // Update the adapter with fresh data
                         photoAdapter.clear();
                         photoAdapter.addAll(album.getPhotos());
                         photoAdapter.notifyDataSetChanged();
                         updateEmptyState();
-                        
-                        int photoCount = album.getPhotos().size();
-                        Toast.makeText(this, "Photo added. Album now has " + photoCount + " photos", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "Photo added successfully", Toast.LENGTH_SHORT).show();
                     } else {
-                        Toast.makeText(this, "Failed to add photo - null return from addPhotoToAlbum", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "Failed to add photo", Toast.LENGTH_SHORT).show();
                     }
                 }
             }
@@ -397,7 +353,7 @@ public class AlbumActivity extends AppCompatActivity {
                         try {
                             switch (which) {
                                 case 0: // Slideshow
-                                    if (album.getPhotos() == null || album.getPhotos().isEmpty()) {
+                                    if (album.getPhotos().isEmpty()) {
                                         Toast.makeText(this, "Album is empty. Add photos first.", Toast.LENGTH_SHORT).show();
                                     } else {
                                         startSlideshow(album.getPhotos().get(0));
@@ -436,9 +392,6 @@ public class AlbumActivity extends AppCompatActivity {
                             if (!newName.isEmpty()) {
                                 if (dataManager.renameAlbum(album, newName)) {
                                     albumNameTextView.setText(newName);
-                                    
-                                    // Save changes after renaming
-                                    dataManager.saveData();
                                 } else {
                                     Toast.makeText(this, "An album with this name already exists", Toast.LENGTH_SHORT).show();
                                 }
@@ -464,10 +417,6 @@ public class AlbumActivity extends AppCompatActivity {
                     .setPositiveButton(R.string.yes, (dialog, which) -> {
                         try {
                             dataManager.deleteAlbum(album);
-                            
-                            // Save changes after deleting
-                            dataManager.saveData();
-                            
                             finish(); // Return to main activity
                         } catch (Exception e) {
                             e.printStackTrace();
