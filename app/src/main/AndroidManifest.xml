@@ -34,6 +34,10 @@
             android:name=".ui.SlideShowActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".ui.PhotoActivity"
+            android:exported="false" />
+
     </application>
 
 </manifest>
