@@ -103,7 +103,7 @@ public class AlbumActivity extends AppCompatActivity implements AdapterView.OnIt
         }
         
         photosList = new ArrayList<>(album.getPhotos());
-        photoAdapter = new ArrayAdapter<Photo>(this, R.layout.item_photo, photosList) {
+        photoAdapter = new ArrayAdapter<Photo>(this, 0, photosList) {
             @Override
             public View getView(int position, View convertView, ViewGroup parent) {
                 ImageView imageView;
