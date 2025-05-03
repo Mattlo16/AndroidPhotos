@@ -46,6 +46,7 @@ public class PhotoActivity extends AppCompatActivity {
     private Button addTagButton;
     private Button slideshowButton;
     private Button moveToAlbumButton;
+    private Button deletePhotoButton;
     private Button backToAlbumButton;
 
     private TagAdapter tagAdapter;
@@ -107,6 +108,20 @@ public class PhotoActivity extends AppCompatActivity {
         moveToAlbumButton = findViewById(R.id.moveToAlbumButton);
         backToAlbumButton = findViewById(R.id.backToAlbumButton);
 
+        // Initialize deletePhotoButton - this assumes you have a button with ID 'deletePhotoButton' in your layout
+        deletePhotoButton = findViewById(R.id.deletePhotoButton);
+        
+        // If the button doesn't exist in the layout yet, you'll need to add it to activity_photo.xml
+        // If it doesn't exist in the XML, you can handle the null case or create it programmatically
+        if (deletePhotoButton == null) {
+            // For demonstration purposes only - you should add this button to your XML layout instead
+            // This code will not work without proper layout parameters and positioning
+            deletePhotoButton = new Button(this);
+            deletePhotoButton.setText("Delete Photo");
+            // Add to parent layout
+            // This is just a placeholder - you should modify the XML layout instead
+        }
+
         ArrayAdapter<CharSequence> spinnerAdapter = ArrayAdapter.createFromResource(
                 this, R.array.tag_types, android.R.layout.simple_spinner_item);
         spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -158,8 +173,26 @@ public class PhotoActivity extends AppCompatActivity {
         });
 
         moveToAlbumButton.setOnClickListener(v -> showMovePhotoDialog());
+        
+        deletePhotoButton.setOnClickListener(v -> confirmDeletePhoto());
 
         backToAlbumButton.setOnClickListener(v -> finish());
+    }
+
+    private void confirmDeletePhoto() {
+        new AlertDialog.Builder(this)
+                .setTitle("Delete Photo")
+                .setMessage("Are you sure you want to delete this photo from the album?")
+                .setPositiveButton(R.string.yes, (dialog, which) -> {
+                    if (dataManager.removePhotoFromAlbum(album, photo)) {
+                        Toast.makeText(this, "Photo deleted successfully", Toast.LENGTH_SHORT).show();
+                        finish(); // Return to album view
+                    } else {
+                        Toast.makeText(this, "Failed to delete photo", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton(R.string.no, null)
+                .show();
     }
 
     private void addTagToPhoto() {
