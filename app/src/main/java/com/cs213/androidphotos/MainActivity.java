@@ -32,12 +32,20 @@ public class MainActivity extends AppCompatActivity {
         // Initialize AppDataManager
         dataManager = AppDataManager.getInstance(this);
 
-        // Initialize UI components
-        albumsGrid = new GridLayout(this);
+        // Initialize UI components FROM XML
+        albumsGrid = findViewById(R.id.albumsGrid);
+        newAlbumNameEditText = findViewById(R.id.newAlbumNameEditText);
+        createAlbumButton = findViewById(R.id.createAlbumButton);
+        searchButton = findViewById(R.id.searchButton);
+
+        // Set column count (can keep this programmatic)
         albumsGrid.setColumnCount(2);
 
-        // Create a layout for adding albums
-        createNewAlbumLayout();
+        // Set click listeners
+        createAlbumButton.setOnClickListener(v -> createNewAlbum());
+        searchButton.setOnClickListener(v -> {
+            startActivity(new Intent(this, SearchActivity.class));
+        });
 
         // Display albums
         displayAlbums();
@@ -50,22 +58,6 @@ public class MainActivity extends AppCompatActivity {
         displayAlbums();
     }
 
-    private void createNewAlbumLayout() {
-        // Create layout for adding new albums
-        newAlbumNameEditText = new EditText(this);
-        newAlbumNameEditText.setHint(R.string.new_album_name);
-
-        createAlbumButton = new Button(this);
-        createAlbumButton.setText(R.string.create_album);
-        createAlbumButton.setOnClickListener(v -> createNewAlbum());
-
-        searchButton = new Button(this);
-        searchButton.setText(R.string.search_photos);
-        searchButton.setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivity.this, SearchActivity.class);
-            startActivity(intent);
-        });
-    }
 
     private void createNewAlbum() {
         String albumName = newAlbumNameEditText.getText().toString().trim();
