@@ -198,15 +198,17 @@ public class PhotoActivity extends AppCompatActivity {
     private void addTagToPhoto() {
         String tagType = tagTypeSpinner.getSelectedItem().toString();
         String tagValue = tagValueEditText.getText().toString().trim();
-
+    
         if (tagValue.isEmpty()) {
             Toast.makeText(this, "Tag value cannot be empty", Toast.LENGTH_SHORT).show();
             return;
         }
-
+    
         if (dataManager.addTagToPhoto(photo, tagType, tagValue)) {
             tagAdapter.notifyDataSetChanged();
             tagValueEditText.setText("");
+            // Save data to persist changes
+            dataManager.saveData();
             Toast.makeText(this, "Tag added successfully", Toast.LENGTH_SHORT).show();
         } else {
             Toast.makeText(this, "Failed to add tag or tag already exists", Toast.LENGTH_SHORT).show();
@@ -294,6 +296,8 @@ public class PhotoActivity extends AppCompatActivity {
                     Tag tagToDelete = photo.getTags().get(position);
                     if (dataManager.removeTagFromPhoto(photo, tagToDelete)) {
                         tagAdapter.notifyDataSetChanged();
+                        // Save data to persist changes
+                        dataManager.saveData();
                         Toast.makeText(this, "Tag deleted", Toast.LENGTH_SHORT).show();
                     } else {
                         Toast.makeText(this, "Failed to delete tag", Toast.LENGTH_SHORT).show();
