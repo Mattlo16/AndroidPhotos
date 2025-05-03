@@ -83,6 +83,23 @@ public class AlbumActivity extends AppCompatActivity {
                 openPhotoView(photo);
             }
         });
+
+        photosGridView.setOnItemLongClickListener((parent, view, position, id) -> {
+            Photo photo = photoAdapter.getItem(position);
+            if (photo != null) {
+                showPhotoOptionsDialog(photo);
+                return true;
+            }
+            return false;
+        });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (photoAdapter != null) {
+            photoAdapter.notifyDataSetChanged();
+        }
     }
 
     private void setupPhotoAdapter() {
@@ -122,6 +139,40 @@ public class AlbumActivity extends AppCompatActivity {
         };
 
         photosGridView.setAdapter(photoAdapter);
+    }
+
+    private void showPhotoOptionsDialog(Photo photo) {
+        String[] options = {"View Photo", "Delete Photo"};
+
+        new AlertDialog.Builder(this)
+                .setTitle("Photo Options")
+                .setItems(options, (dialog, which) -> {
+                    switch (which) {
+                        case 0: // View
+                            openPhotoView(photo);
+                            break;
+                        case 1: // Delete
+                            confirmDeletePhoto(photo);
+                            break;
+                    }
+                })
+                .show();
+    }
+
+    private void confirmDeletePhoto(Photo photo) {
+        new AlertDialog.Builder(this)
+                .setTitle("Delete Photo")
+                .setMessage("Are you sure you want to delete this photo?")
+                .setPositiveButton(R.string.yes, (dialog, which) -> {
+                    if (dataManager.removePhotoFromAlbum(album, photo)) {
+                        photoAdapter.notifyDataSetChanged();
+                        Toast.makeText(this, "Photo deleted successfully", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(this, "Failed to delete photo", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton(R.string.no, null)
+                .show();
     }
 
     private void openPhotoSelector() {
