@@ -6,7 +6,6 @@
     android:padding="16dp"
     android:background="?attr/colorPrimary">
 
-    <!-- Header Section -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -37,7 +36,6 @@
         android:text="@string/search_photos"
         android:layout_marginTop="8dp"/>
 
-    <!-- Albums Grid Section -->
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -55,7 +53,6 @@
 
     </ScrollView>
 
-    <!-- Loading Indicator (initially hidden) -->
     <ProgressBar
         android:id="@+id/progressBar"
         android:layout_width="wrap_content"
