@@ -219,3 +219,5 @@ public class SlideShowActivity extends AppCompatActivity {
             
             photoInfoTextView.setText(infoBuilder.toString());
         }
+    }
+}
