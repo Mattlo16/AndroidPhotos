@@ -2,6 +2,7 @@ package com.cs213.androidphotos.ui;
 
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -52,10 +53,8 @@ public class PhotoActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_photo);
         
-        // Initialize views
         photoImageView = findViewById(R.id.photoImageView);
         captionTextView = findViewById(R.id.captionTextView);
-        dateTextView = findViewById(R.id.dateTextView);
         tagsRecyclerView = findViewById(R.id.tagsRecyclerView);
         tagTypeSpinner = findViewById(R.id.tagTypeSpinner);
         tagValueEditText = findViewById(R.id.tagValueEditText);
@@ -63,28 +62,28 @@ public class PhotoActivity extends AppCompatActivity {
         slideshowButton = findViewById(R.id.slideshowButton);
         moveToAlbumButton = findViewById(R.id.moveToAlbumButton);
         backToAlbumButton = findViewById(R.id.backToAlbumButton);
+
+        dateTextView = findViewById(R.id.dateTextView); 
         
-        // Setup RecyclerView
         tagsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         tagsAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1);
         tagsRecyclerView.setAdapter(tagsAdapter);
         
-        // Setup Spinner
-        ArrayAdapter<CharSequence> spinnerAdapter = ArrayAdapter.createFromResource(this,
-                R.array.tag_types, android.R.layout.simple_spinner_item);
+        ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(this, 
+            android.R.layout.simple_spinner_item, 
+            new String[]{"Person", "Location"});
         spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         tagTypeSpinner.setAdapter(spinnerAdapter);
         
-        // Get intent data
         albumName = getIntent().getStringExtra("albumName");
-        String photoUri = getIntent().getStringExtra("photoUri");
+        String photoPath = getIntent().getStringExtra("photoPath");
         
-        if (albumName == null || photoUri == null) {
+        if (albumName == null || photoPath == null) {
             showErrorAndFinish("Invalid photo data");
             return;
         }
         
-        currentPhoto = AppDataManager.getInstance().getPhoto(albumName, photoUri);
+        currentPhoto = AppDataManager.getInstance(this).getPhotoByPath(photoPath);
         if (currentPhoto == null) {
             showErrorAndFinish("Photo not found");
             return;
@@ -92,7 +91,6 @@ public class PhotoActivity extends AppCompatActivity {
         
         setTitle(currentPhoto.getCaption().isEmpty() ? "Photo" : currentPhoto.getCaption());
         
-        // Set click listeners
         addTagButton.setOnClickListener(v -> onAddTagClick());
         slideshowButton.setOnClickListener(v -> startSlideshow());
         moveToAlbumButton.setOnClickListener(v -> showMovePhotoDialog());
@@ -103,19 +101,23 @@ public class PhotoActivity extends AppCompatActivity {
     
     private void loadPhotoDetails() {
         try {
-            Bitmap bitmap = MediaStore.Images.Media.getBitmap(
-                getContentResolver(), 
-                Uri.parse(currentPhoto.getUri()));
-            photoImageView.setImageBitmap(bitmap);
-        } catch (IOException e) {
-            photoImageView.setImageResource(R.drawable.ic_broken_image);
+            Bitmap bitmap = BitmapFactory.decodeFile(currentPhoto.getFilePath());
+            if (bitmap != null) {
+                photoImageView.setImageBitmap(bitmap);
+            } else {
+                photoImageView.setImageResource(android.R.drawable.ic_menu_gallery);
+            }
+        } catch (Exception e) {
+            photoImageView.setImageResource(android.R.drawable.ic_menu_gallery);
         }
         
         captionTextView.setText(currentPhoto.getCaption().isEmpty() ? 
             "(No caption)" : currentPhoto.getCaption());
         
-        SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss", Locale.getDefault());
-        dateTextView.setText(dateFormat.format(currentPhoto.getDate()));
+        if (dateTextView != null) {
+            SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss", Locale.getDefault());
+            dateTextView.setText(dateFormat.format(currentPhoto.getDate()));
+        }
         
         updateTagsList();
     }
@@ -139,7 +141,7 @@ public class PhotoActivity extends AppCompatActivity {
         
         Tag newTag = new Tag(tagName, tagValue);
         if (currentPhoto.addTag(newTag)) {
-            AppDataManager.getInstance().updatePhoto(albumName, currentPhoto);
+            AppDataManager.getInstance(this).updatePhoto(albumName, currentPhoto);
             tagValueEditText.setText("");
             updateTagsList();
         } else {
@@ -150,35 +152,33 @@ public class PhotoActivity extends AppCompatActivity {
     private void startSlideshow() {
         Intent intent = new Intent(this, SlideShowActivity.class);
         intent.putExtra("albumName", albumName);
-        intent.putExtra("photoUri", currentPhoto.getUri());
+        intent.putExtra("photoPath", currentPhoto.getFilePath());
         startActivity(intent);
     }
     
     private void showEditCaptionDialog() {
-        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(50, 40, 50, 10);
+
+        final EditText input = new EditText(this);
+        input.setText(currentPhoto.getCaption());
+        layout.addView(input);
+
+        new MaterialAlertDialogBuilder(this)
             .setTitle("Edit Caption")
-            .setView(R.layout.dialog_edit_caption)
-            .setPositiveButton("Save", (d, which) -> {
-                EditText captionEditText = ((AlertDialog)d).findViewById(R.id.captionEditText);
-                if (captionEditText != null) {
-                    String newCaption = captionEditText.getText().toString().trim();
-                    editCaption(newCaption);
-                }
+            .setView(layout)
+            .setPositiveButton("Save", (dialog, which) -> {
+                String newCaption = input.getText().toString().trim();
+                editCaption(newCaption);
             })
             .setNegativeButton("Cancel", null)
-            .create();
-            
-        dialog.show();
-        
-        EditText captionEditText = dialog.findViewById(R.id.captionEditText);
-        if (captionEditText != null) {
-            captionEditText.setText(currentPhoto.getCaption());
-        }
+            .show();
     }
     
     private void editCaption(String newCaption) {
         currentPhoto.setCaption(newCaption);
-        AppDataManager.getInstance().updatePhoto(albumName, currentPhoto);
+        AppDataManager.getInstance(this).updatePhoto(albumName, currentPhoto);
         setTitle(newCaption.isEmpty() ? "Photo" : newCaption);
         captionTextView.setText(newCaption.isEmpty() ? "(No caption)" : newCaption);
     }
@@ -193,7 +193,7 @@ public class PhotoActivity extends AppCompatActivity {
     }
     
     private void deletePhoto() {
-        boolean success = AppDataManager.getInstance().removePhotoFromAlbum(albumName, currentPhoto);
+        boolean success = AppDataManager.getInstance(this).removePhotoFromAlbum(albumName, currentPhoto);
         if (success) {
             Toast.makeText(this, "Photo deleted", Toast.LENGTH_SHORT).show();
             finish();
@@ -204,7 +204,7 @@ public class PhotoActivity extends AppCompatActivity {
     
     private void showMovePhotoDialog() {
         ArrayList<String> otherAlbums = new ArrayList<>(
-            AppDataManager.getInstance().getAlbumNames()
+            AppDataManager.getInstance(this).getAlbumNames()
         );
         otherAlbums.remove(albumName);
         
@@ -225,7 +225,7 @@ public class PhotoActivity extends AppCompatActivity {
     }
     
     private void movePhotoToAlbum(String targetAlbum) {
-        boolean success = AppDataManager.getInstance().movePhotoBetweenAlbums(
+        boolean success = AppDataManager.getInstance(this).movePhotoBetweenAlbums(
             albumName, targetAlbum, currentPhoto
         );
         
@@ -239,7 +239,7 @@ public class PhotoActivity extends AppCompatActivity {
     
     private void showCopyPhotoDialog() {
         ArrayList<String> otherAlbums = new ArrayList<>(
-            AppDataManager.getInstance().getAlbumNames()
+            AppDataManager.getInstance(this).getAlbumNames()
         );
         otherAlbums.remove(albumName);
         
@@ -260,7 +260,7 @@ public class PhotoActivity extends AppCompatActivity {
     }
     
     private void copyPhotoToAlbum(String targetAlbum) {
-        boolean success = AppDataManager.getInstance().addPhotoToAlbum(targetAlbum, currentPhoto);
+        boolean success = AppDataManager.getInstance(this).addPhotoToAlbum(targetAlbum, currentPhoto);
         
         if (success) {
             Toast.makeText(this, "Photo copied to " + targetAlbum, Toast.LENGTH_SHORT).show();
