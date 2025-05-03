@@ -3,15 +3,17 @@ package com.cs213.androidphotos.ui;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.os.Bundle;
-import android.provider.MediaStore;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.GridView;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -23,11 +25,8 @@ import com.cs213.androidphotos.model.Album;
 import com.cs213.androidphotos.util.AppDataManager;
 import com.cs213.androidphotos.model.Photo;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-import com.google.android.material.textfield.TextInputEditText;
 
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Objects;
 
 public class AlbumActivity extends AppCompatActivity implements AdapterView.OnItemClickListener {
 
@@ -68,7 +67,6 @@ public class AlbumActivity extends AppCompatActivity implements AdapterView.OnIt
 
         Button menuButton = findViewById(R.id.albumMenuButton);
         menuButton.setOnClickListener(v -> showAlbumActionsMenu());
-
     }
 
     private void showAlbumActionsMenu() {
@@ -113,6 +111,7 @@ public class AlbumActivity extends AppCompatActivity implements AdapterView.OnIt
                     imageView.setLayoutParams(new GridView.LayoutParams(imageSize, imageSize));
                     imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
                     imageView.setPadding(8, 8, 8, 8);
+                    imageView.setBackgroundColor(Color.LTGRAY);
                 } else {
                     imageView = (ImageView) convertView;
                 }
@@ -121,20 +120,14 @@ public class AlbumActivity extends AppCompatActivity implements AdapterView.OnIt
                 if (photo != null) {
                     try {
                         Bitmap bitmap = BitmapFactory.decodeFile(photo.getFilePath());
-                        if (bitmap != null) {
-                            imageView.setImageBitmap(bitmap);
-                        } else {
-                            imageView.setImageBitmap(null);
-                        }
+                        imageView.setImageBitmap(bitmap);
                     } catch (Exception e) {
                         imageView.setImageBitmap(null);
                     }
                 }
-                
                 return imageView;
             }
         };
-        
         photosGridView.setAdapter(photoAdapter);
     }
 
@@ -148,23 +141,23 @@ public class AlbumActivity extends AppCompatActivity implements AdapterView.OnIt
     }
     
     private void showRenameAlbumDialog() {
-        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(50, 40, 50, 10);
+
+        final EditText input = new EditText(this);
+        input.setText(albumName);
+        layout.addView(input);
+
+        new MaterialAlertDialogBuilder(this)
             .setTitle("Rename Album")
-            .setView(R.layout.dialog_rename_album)
-            .setPositiveButton("Rename", (d, which) -> {
-                TextInputEditText etNewName = ((AlertDialog)d).findViewById(R.id.etNewAlbumName);
-                String newName = Objects.requireNonNull(etNewName).getText().toString().trim();
+            .setView(layout)
+            .setPositiveButton("Rename", (dialog, which) -> {
+                String newName = input.getText().toString().trim();
                 renameAlbum(newName);
             })
             .setNegativeButton("Cancel", null)
-            .create();
-            
-        dialog.show();
-        
-        TextInputEditText etNewName = dialog.findViewById(R.id.etNewAlbumName);
-        if (etNewName != null) {
-            etNewName.setText(albumName);
-        }
+            .show();
     }
     
     private void renameAlbum(String newName) {
@@ -262,5 +255,3 @@ public class AlbumActivity extends AppCompatActivity implements AdapterView.OnIt
         finish();
     }
 }
-    
-    
