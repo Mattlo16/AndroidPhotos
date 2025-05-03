@@ -212,11 +212,12 @@ public class AlbumActivity extends AppCompatActivity implements AdapterView.OnIt
                     return;
                 }
                 
-                boolean success = AppDataManager.getInstance(this).addPhotoToAlbum(album, filePath);
+                Photo addedPhoto = AppDataManager.getInstance(this).addPhotoToAlbum(album, filePath);
                 
-                if (success) {
-                    photosList.add(photo);
+                if (addedPhoto != null) {
+                    photosList.add(addedPhoto);
                     photoAdapter.notifyDataSetChanged();
+                    showToast("Photo added successfully");
                 } else {
                     showToast("Photo already exists in album");
                 }
