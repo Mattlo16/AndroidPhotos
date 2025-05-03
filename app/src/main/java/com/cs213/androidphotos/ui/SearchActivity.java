@@ -108,6 +108,15 @@ public class SearchActivity extends AppCompatActivity {
         // Set up search results adapter
         searchResultAdapter = new SearchResultAdapter(searchResults);
         searchResultsRecyclerView.setAdapter(searchResultAdapter);
+
+        if (singleTagRadioButton.isChecked()) {
+            tag2TypeSpinner.setEnabled(false);
+            tag2ValueAutoComplete.setEnabled(false);
+        } else {
+            tag2TypeSpinner.setEnabled(true);
+            tag2ValueAutoComplete.setEnabled(true);
+        }
+        
     }
 
     private void setupListeners() {
