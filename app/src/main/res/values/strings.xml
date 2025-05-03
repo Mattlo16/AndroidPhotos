@@ -60,6 +60,7 @@
     <string name="cancel">Cancel</string>
 
     <!-- New strings that need to be added -->
+    <string name="delete_photo">Delete Photo</string>
     <string name="open">Open</string>
     <string name="search_result">Search Result</string>
     <string name="create_album_from_results">Create Album</string>
