@@ -212,8 +212,7 @@ public class AlbumActivity extends AppCompatActivity implements AdapterView.OnIt
                     return;
                 }
                 
-                Photo photo = new Photo(filePath);
-                boolean success = AppDataManager.getInstance(this).addPhotoToAlbum(album, photo);
+                boolean success = AppDataManager.getInstance(this).addPhotoToAlbum(album, filePath);
                 
                 if (success) {
                     photosList.add(photo);
